@@ -3,3 +3,5 @@ This repo is for the Campus Tour App capstone project at Portland State Universi
 Ryan Mayers
 
 Corlin Fardal
+
+Qawi Ntsasa
