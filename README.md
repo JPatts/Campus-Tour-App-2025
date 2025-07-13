@@ -5,3 +5,5 @@ Ryan Mayers
 Corlin Fardal
 
 Qawi Ntsasa
+
+Jonah Wright
