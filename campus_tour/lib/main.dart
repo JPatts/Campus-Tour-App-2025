@@ -3,7 +3,10 @@ import 'package:flutter/material.dart';
 import 'map.dart'; // left-hand page
 import 'camera.dart'; // right-hand page
 
-void main() => runApp(const MyApp());
+void main() {
+  debugPrint('App starting...');
+  runApp(const MyApp());
+}
 
 /// Top-level app wrapper
 class MyApp extends StatelessWidget {
@@ -11,6 +14,7 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    debugPrint('Building MyApp...');
     return MaterialApp(
       title: 'Campus Tour App',
       debugShowCheckedModeBanner: false,
@@ -65,6 +69,7 @@ class _HomeWithNavState extends State<HomeWithNav> {
 
   @override
   Widget build(BuildContext context) {
+    debugPrint('Building HomeWithNav, current page: $_currentPage');
     return Scaffold(
       // Banner appears ONLY on the center page (index 1)
       appBar: _currentPage == 1
@@ -83,30 +88,24 @@ class _HomeWithNavState extends State<HomeWithNav> {
         children: _pages,
       ),
 
-      // Bottom bar with left / right arrows
-      bottomNavigationBar: BottomAppBar(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.arrow_back),
-                // Disable when already on first page (Map)
-                onPressed: _currentPage > 0
-                    ? () => _goToPage(_currentPage - 1)
-                    : null,
-              ),
-              IconButton(
-                icon: const Icon(Icons.arrow_forward),
-                // Disable when already on last page (Camera)
-                onPressed: _currentPage < _pages.length - 1
-                    ? () => _goToPage(_currentPage + 1)
-                    : null,
-              ),
-            ],
+      // Bottom navigation bar with 3 icons
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentPage,
+        onTap: (index) => _goToPage(index),
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.map),
+            label: 'Map',
           ),
-        ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.camera_alt),
+            label: 'Camera',
+          ),
+        ],
       ),
     );
   }

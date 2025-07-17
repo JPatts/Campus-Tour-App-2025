@@ -1,0 +1,187 @@
+Campus Tour App
+Summer 2025
+Portland State University – Computer Science Capstone Program
+
+
+Sponsor: Bruce Irvin
+Team Lead: Jonah Pattison
+Team Members: Corlin Fardal, Jonah Wright, Qawi Ntsasa, Ryan Mayers, Vlad Chevdar
+
+Roles: Instead of each team member being assigned a specific role, each team member is a developer on this project. Each developer will contribute to the codebase by helping implement all features outlined in this document. Specific tasks will be assigned by the team lead to each developer as they arise.
+
+
+There is one Git Repository: https://github.com/JPatts/Campus-Tour-App-2025 
+Github is currently public but will be made private upon request from sponsor
+
+
+Locations of all other project materials will be in this Google Drive folder: https://drive.google.com/drive/folders/1Wi-DBqIKGkhZO8AZ6vFMYC2CQDhTulc7 
+
+
+
+
+High-level project overview
+
+
+Currently in-person campus tours are limited to specific dates and times when the university provides them. These tours are not self-paced and each person attending the tour follows along with a tour guide, possibly receiving information that does not apply to or interest. The tourists may be potential students, relatives of students, or any person who wants to learn more about Portland State University. This app will solve this issue allowing for tourists to take a self-guided tour of Portland State University.
+
+	Our product provides a free self guided tour of Portland State University for anyone who is interested in touring the campus themselves. The users will be able to install the app on their mobile device, iPhone or Android. Once installed they can use their device's camera and physically move to hotspots around campus and gain information through text, videos, and augmented reality displays. The users can also see an aerial view map of the school that also shares their current location so they can plan how to get to the next hotspot.
+
+
+We are building a mobile app that contains a UI with three major portions, the welcome screen & main feed, the aerial view map, and a window that allows the users, Tourists, to use their own device's camera. The features we are implementing are:
+Run this mobile application on iPhone and Android devices.
+The user can save their status of the tour if they need to stop the tour and come back at a later date or time to complete the tour.
+View their current location via an aerial view map.
+View all hotspots of the tour on the same aerial view map.
+View content from the hotspots the user has visited in the past 72 hours.
+The user will be able to view specific content once they have physically moved to a hotspot location
+
+
+In addition to the user’s features we are also implementing a management system in which a Curator can create and alter the tour. This system will work via the Curator accessing the Git repository and altering the necessary files. The features we plan to implement for this Curator role are as follows:
+See the current version of the tour
+Create/Edit/Delete hotspots
+Update details for hotspots such as changing name, location, hotspot content. As well as uploading new content (videos, photos, audio files)
+All remotely 
+
+
+During the planning of this project our team decided to reject the goal of building a modern full stack app that relied on cloud hosting. We first pondered this idea since we were focused on deployment of this app in order for the Tourists to be able to download and use this app on the device. This was rejected due complexity and lack of time since the creation of a modern full stack mobile app would make this project much larger than our team could handle given the time constraints of summer term. Rejecting this goal was a strategic decision that did not come lightly. This decision allows us to spend more time focusing on building a mobile app that has a good UI & UX as well as allowing our team to focus on implementing a well curated campus tour.
+
+
+The technologies being used are Flutter (as well as various Flutter plugins & toolkits), Git/Github, Various IDE’s.
+Flutter – is an open source framework from Google that allows for developers to write code once and deploy it to many different platforms. This means that the front-end language that we will use to construct the UI, logic, and navigation will be Google’s Dart coding language. This will be the primary coding language used since we will not be building a large backend but instead displaying content in the form of assets to the users. 
+Below is a list of Flutter plugins we will be using:
+ar_flutter_plugin – decides which device specific AR plugin to call at runtime.
+ARKit – for working with AR assets for iOS.
+ARCore – for working withAR assets for Android.
+google_maps_flutter – allows for Google Maps to be loaded within the app and allows for custom markers to be overlayed.
+Need to look into cost
+geolocator – Fetches users GPS coordinates and responds to users movement in real time.
+permission_handler – Allows users to grant or decline access to their location and/or camera.
+camera – Allows the app to grab live camera view and layer widgets on top of this view.
+Git & Github – in order to remotely store all code and assets used for the creation of the app and tour contents. This version control software will allow our team to work incrementally on different parts of the app at the same time, this technology will also allow the Curator to remotely manage the tour.
+IDE’s – Applications that allow for the development of code will be used, various team members are welcome to use the IDE of their choice such as Visual Studio Code. For testing purposes we will be using Android Studio and Xcode to sideload the app onto our devices.
+
+
+The constraints imposed by the sponsor are minimal. The sponsor wants the app to be able to be downloaded on different devices and allow users to take a self-guided tour of Portland State University’s campus. The sponsor also requires the Curator role to be able to edit and manage the tour remotely. This means that the entirety of the tour's content will be stored in a git repository.
+
+
+Upon completion of summer term we plan to deliver a git repository that contains all necessary code for the app to function. This repository will also include the Curator’s management system (a specific set of files) that will allow the Curator to manage the tour and its contents. Along with the codebase in the repository we will also provide documentation. One set of documents that explains the code as well as another document that serves as instructions to the Curator.
+
+
+
+
+
+
+
+Architecture
+
+
+
+
+The architecture of this app will be relatively straight forward. All data will be stored on the app upon the initial download. The app will not have much of a backend codebase since it will be a front end language defining the UI/UX, logic, and navigation displaying assets and content to the user. This diagram shows that the Tourist will use the app as it is sideloaded from the developers IDE represented as a computer and that app will contain the campus tour and its content. The Curator can be seen on the left remotely accessing the git repository that will influence the developers computer which will in turn change the content of the app.
+
+Process
+
+	The process we are using is the Waterfall Method, which will allow the entire team to work together in each phase of the project. We are using Discord to keep as our communication tool which allows the team lead to follow up with each teammate individually to ensure that everyone is working together. Our team is not assigning roles but as tasks come up the team lead will be delegating tasks and asking individual team members to help on specific pieces of the app that they are interested in. At this time we have no plan to copyright any of our code.
+The risks we see in this project and our attempt at mitigation are as follows:
+AR content not working as expected – we will then focus on photos, videos, audio, and text content delivered in different fashions.
+Features not working well on one device (iOS or Android). If necessary we will fall back to one platform.
+Fallback for Google Maps being too expensive:
+Static map - updated for each version
+The user can’t see exact location
+
+
+Schedule
+
+Formation of team and project assignment – June 10th
+Completion of team and project definitions – June 23rd 
+Creation of Discord and initial team discussions – June 25th 
+Research and discussion of tech stack – Week of July 1st 
+Mid project meeting with Sponsor – July 8th
+
+With the 7 weeks left:
+1 – Final defining of project, tech stacks, and workflow, beginning of coding          July 13th - 19th
+2 – implementation of UI and and app workflow 				            July 20th - 26th	3 – Creation of hotspots and testing of AR                                                               July 27th - Aug 2nd
+4 – Implementation of many hotspots further testing of AR			        Aug 3rd - Aug 9th
+5 – Full Working App complete						   Aug 10th - Aug 16th
+6 – Further testing and bug fixing 						   Aug 17th - Aug 23rd
+7 – Final touches completion of documentation    				   Aug 24th - Aug 28th
+
+Final Delivery and presentation: August 29th
+
+Backlog 
+
+This backlog will be a work in progress and features that do not get finished will be added
+
+
+Appendix: Glossary of Terms
+
+AR – Augmented Reality: a technology that superimposes a computer-generated image on a user's view of the real world, thus providing a composite view.
+
+IDE – integrated development environment: a software application that allows for users to write, maintain, and deploy code. 
+
+Appendix: Example Use Case Scenarios/Epics
+
+Use Case #1 – Tourist goes on tour Campus Tour
+
+ Preconditions:
+App installed and initialized
+User grants location & camera permissions
+User is physically at Portland State University park blocks
+Main:
+The Tourist can move to the left window and view an aerial map of Portland State University which has markers for their current location and hotspots they can go to.
+User’s blue dot (from GPS) updates in real time on the map as they move to a hotspot.
+User reaches a hotspot and once in boundaries is prompted to load that hotspot's content.
+Users can move to the right of the home screen and to enter AR View and look through their device's camera.
+Hotspot content is displayed through the user's camera and on the main menu screen in the feed.
+Tourist finishes enjoying the content at that hotspot, leaves hotspots boundaries and heads to the next hotspot. 
+Steps 3–6 repeat for each hotspot.
+After the last hotspot, the app displays a “Tour Complete” screen. Main menu screen has a feed of all hotspots visited with their content in non-AR  format.
+Postconditions: Tour content is stored in feed for 72 hours after completion of tour.
+
+
+Use Case #2 – Tourist takes tour over several days 
+
+Preconditions:
+App installed and initialized
+User grants location & camera permissions
+User is physically at Portland State University park blocks
+Main:
+The Tourist can move to the left window and view an aerial map of Portland State University which has markers for their current location and hotspots they can go to.
+User’s blue dot (from GPS) updates in real time on the map as they move to a hotspot.
+User reaches a hotspot and once in boundaries is prompted to load that hotspot's content.
+Users can move to the right of the home screen and to enter AR View and look through their device's camera.
+Hotspot content is displayed through the user's camera and on the main menu screen in the feed.
+Tourist completes the content at that hotspot, leaving the hotspots boundaries.
+Tourist leaves campus with remaining hotspots still left to be viewed.
+Tourist accesses app while not on PSU Campus and gets a message saying they have to be on PSU campus.
+Tourist travels back to PSU campus after 24 hours and opens the app to see hotspots they have been to in the home screen feed.
+User completes tour by visiting remaining hotspots
+
+Use Case #3 – Tourist does not share access to Location and Camera
+
+Preconditions:
+App installed and initialized
+User DOES NOT grant location & camera permissions
+User is physically at Portland State University park blocks
+Main:
+User is greeted via the welcome screen and is shown instructions on how to use the app.
+The User moves to the aerial view app which is not centered upon the user's location but instead at a fixed location above Portland State University displaying all hotspots. 
+Users can select to start the tour on the main screen.
+A hotspot content will be displayed in the feed in non-AR content in sequential order.
+Once the User has completed this hotspots content they can choose to continue which loads the next hotspots content.
+User repeats steps 4 and 5 until the tour is complete.
+NOTES – do not provide functionality to users who do no grant permissions
+Use Case #4 – Curator updates tour content
+Preconditions:
+Curator has a GitHub account & SSH key
+Campus Tour Repo has been cloned locally
+Curator has access to and has read instructions on how to edit Campus Tour content
+Main:
+Curator creates a new folder in tour directory – each folder here represents a single hotspot
+Curator adds geolocation of hotspots and determines radius 
+Curator adds content in the form of text, video, and AR assets.
+Curator runs testing files that ensure the hotspot has all necessary files, correct geolocation and asset anchors, these tests will also ensure correct file types.
+If tests fail, the Curator is asked to fix them before committing to repo. Once tests pass, the Curator can commit to repo.
+Curator commits changes to main.
+New hotspots will be added upon downloading the updated version of the app.
+

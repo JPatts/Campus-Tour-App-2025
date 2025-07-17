@@ -28,5 +28,11 @@
 	<string>MainMenu</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<key>NSLocationUsageDescription</key>
+	<string>This app needs access to location to show your position on the campus map.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>This app needs access to location to show your position on the campus map.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>This app needs access to location to show your position on the campus map.</string>
 </dict>
 </plist>

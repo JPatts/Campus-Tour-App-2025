@@ -37,6 +37,7 @@ dependencies:
   # ar_flutter_plugin: ^0.7.3
   geolocator: ^9.0.2
   permission_handler: ^10.4.5
+  google_maps_flutter: ^2.8.0
 
 dev_dependencies:
   flutter_test:
