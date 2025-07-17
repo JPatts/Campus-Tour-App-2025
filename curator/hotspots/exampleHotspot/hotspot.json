@@ -1,0 +1,28 @@
+{
+    "hotspotId": "exampleHotspot",
+    "name": "Example Hotspot",
+    "description": "This is an example hotspot used for demonstration purposes.",
+    "location": {
+        "latitude": 37.7749,
+        "longitude": -122.4194,
+        "radius": 100 
+    },
+    "createdAt": "2023-10-01T12:00:00Z",
+    "updatedAt": "2023-10-01T12:00:00Z",
+
+    "status": "active",
+    "features": [
+        {
+            "featureId": "1",
+            "type": "photo",
+            "content": "Here's a photo of my cat Bali.",
+            "fileLocation": "photoOfBali.jpg"
+        },
+        {
+            "featureId": "2",
+            "type": "video",
+            "content": "Here's a video of my cat Bali",
+            "fileLocation": "videoOfBali.mp4"
+        }
+    ]
+}
