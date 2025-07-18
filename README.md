@@ -7,3 +7,5 @@ Corlin Fardal
 Qawi Ntsasa
 
 Jonah Wright
+
+Vlad Chevdar
