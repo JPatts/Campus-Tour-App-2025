@@ -442,9 +442,9 @@ class _MapScreenState extends State<MapScreen> {
               Text(hotspot.description),
               const SizedBox(height: 16),
               if (distance != null) ...[
-                Text('Distance: ${distance.toStringAsFixed(0)}m away'),
+                Text('Distance: ${_formatDistance(distance)} away'),
                 const SizedBox(height: 8),
-                Text('Get within ${hotspot.location.radius.toStringAsFixed(0)}m to unlock content'),
+                Text('Get within ${_formatDistance(hotspot.location.radius)} to unlock content'),
               ],
             ],
           ),
@@ -469,6 +469,24 @@ class _MapScreenState extends State<MapScreen> {
         return Icons.audiotrack;
       default:
         return Icons.info;
+    }
+  }
+
+  String _formatDistance(double meters) {
+    // Convert meters to feet
+    double feet = meters * 3.28084;
+    
+    // If less than 1000 feet, show in feet
+    if (feet < 1000) {
+      return '${feet.toStringAsFixed(0)} ft';
+    }
+    
+    // If 1000 feet or more, show in miles
+    double miles = feet / 5280;
+    if (miles < 0.1) {
+      return '${(miles * 10).round() / 10} miles'; // Round to 0.1 miles
+    } else {
+      return '${miles.toStringAsFixed(1)} miles';
     }
   }
 
