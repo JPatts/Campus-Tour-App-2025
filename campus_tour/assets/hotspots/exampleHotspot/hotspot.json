@@ -1,0 +1,28 @@
+{
+    "hotspotId": "exampleHotspot",
+    "name": "PSU Park Blocks",
+    "description": "Welcome to Portland State University! This is the heart of our campus.",
+    "location": {
+        "latitude": 45.5152,
+        "longitude": -122.6784,
+        "radius": 100 
+    },
+    "createdAt": "2023-10-01T12:00:00Z",
+    "updatedAt": "2023-10-01T12:00:00Z",
+
+    "status": "active",
+    "features": [
+        {
+            "featureId": "1",
+            "type": "photo",
+            "content": "Historic view of the PSU Park Blocks area.",
+            "fileLocation": "photoOfBali.jpg"
+        },
+        {
+            "featureId": "2",
+            "type": "video",
+            "content": "Virtual tour of the Park Blocks",
+            "fileLocation": "videoOfBali.mov"
+        }
+    ]
+}
