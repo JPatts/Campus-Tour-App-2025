@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
-import 'dart:io' show Platform;
 import 'dart:math' as math;
 import 'models/hotspot.dart';
 import 'services/hotspot_service.dart';
+import 'services/location_service.dart';
+import 'helpers/hotspot_helpers.dart';
+import 'helpers/geo_helpers.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({Key? key}) : super(key: key);
@@ -38,95 +38,15 @@ class _MapScreenState extends State<MapScreen> {
 
   Future<void> _initializeMap() async {
     try {
-      await _requestLocationPermission();
-      await _getCurrentLocation();
-      await _loadHotspots();
+      await LocationService.requestLocationPermission();
+      _currentPosition = await LocationService.getCurrentLocation();
+      _hotspots = await _hotspotService.loadHotspots();
     } catch (e) {
       setState(() {
         _errorMessage = 'Error initializing map: $e';
         _isLoading = false;
       });
     }
-  }
-
-  Future<void> _loadHotspots() async {
-    try {
-      final hotspots = await _hotspotService.loadHotspots();
-      setState(() {
-        _hotspots = hotspots;
-      });
-    } catch (e) {
-      debugPrint('Error loading hotspots: $e');
-    }
-  }
-
-  Future<void> _requestLocationPermission() async {
-    if (!kIsWeb && (Platform.isIOS || Platform.isAndroid)) {
-      var status = await Permission.location.status;
-      if (!status.isGranted) {
-        status = await Permission.location.request();
-      }
-
-      if (!status.isGranted) {
-        throw Exception('Location permission denied');
-      }
-    }
-  }
-
-  Future<void> _getCurrentLocation() async {
-    try {
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        throw Exception('Location services are disabled');
-      }
-
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          throw Exception('Location permissions are denied');
-        }
-      }
-
-      if (permission == LocationPermission.deniedForever) {
-        throw Exception('Location permissions are permanently denied');
-      }
-
-      Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
-
-      setState(() {
-        _currentPosition = position;
-        _isLoading = false;
-      });
-
-      // Move camera to user's location if it's near PSU
-      if (_mapController != null && _isNearPSU(position)) {
-        _mapController!.animateCamera(
-          CameraUpdate.newCameraPosition(
-            CameraPosition(
-              target: LatLng(position.latitude, position.longitude),
-              zoom: 17.0,
-            ),
-          ),
-        );
-      }
-    } catch (e) {
-      setState(() {
-        _errorMessage = 'Error getting location: $e';
-        _isLoading = false;
-      });
-    }
-  }
-
-  bool _isNearPSU(Position position) {
-    // Check if user is within ~2km of PSU
-    double distance = Geolocator.distanceBetween(
-      45.5152, -122.6784, // PSU coordinates
-      position.latitude, position.longitude,
-    );
-    return distance <= 2000; // 2km radius
   }
 
   Set<Marker> _createMarkers() {
@@ -153,20 +73,12 @@ class _MapScreenState extends State<MapScreen> {
 
   void _onHotspotTapped(Hotspot hotspot) {
     // Check if user is within hotspot radius or testing mode is enabled
-    if (_testingMode) {
+    if (isHotspotUnlocked(
+      hotspot: hotspot,
+      userPosition: _currentPosition,
+      testingMode: _testingMode
+    )) {
       _showHotspotContent(hotspot);
-    } else if (_currentPosition != null) {
-      bool isWithinRadius = _hotspotService.isUserInHotspot(
-        hotspot,
-        _currentPosition!.latitude,
-        _currentPosition!.longitude,
-      );
-
-      if (isWithinRadius) {
-        _showHotspotContent(hotspot);
-      } else {
-        _showHotspotInfo(hotspot);
-      }
     } else {
       _showHotspotInfo(hotspot);
     }
@@ -261,7 +173,7 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   Widget _buildMediaContent(Hotspot hotspot, HotspotFeature feature) {
-    final String assetPath = 'assets/hotspots/${hotspot.hotspotId}/Assets/${feature.fileLocation}';
+    final String assetPath = getAssetPath(hotspot, feature);
     
     switch (feature.type.toLowerCase()) {
       case 'photo':
@@ -417,12 +329,10 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
-
-
   void _showHotspotInfo(Hotspot hotspot) {
     double? distance;
     if (_currentPosition != null) {
-      distance = _hotspotService.calculateDistance(
+      distance = calculateDistance(
         _currentPosition!.latitude,
         _currentPosition!.longitude,
         hotspot.location.latitude,
@@ -566,7 +476,7 @@ class _MapScreenState extends State<MapScreen> {
     // Check if the tap is within any hotspot radius
     for (final hotspot in _hotspots) {
       if (hotspot.status == 'active') {
-        double distanceToHotspot = _hotspotService.calculateDistance(
+        double distanceToHotspot = calculateDistance(
           tappedLocation.latitude,
           tappedLocation.longitude,
           hotspot.location.latitude,
