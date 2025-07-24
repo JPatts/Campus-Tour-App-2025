@@ -23,6 +23,18 @@
             "type": "video",
             "content": "Here's a video of my cat Bali",
             "fileLocation": "videoOfBali.mp4"
+        },
+        {
+            "featureId": "3",
+            "type": "text",
+            "content": "Here's a short description about Bali, my cat.",
+            "fileLocation": "textAboutBali.txt"
+        },
+        {
+            "featureId": "4",
+            "type": "audio",
+            "content": "Here's some ambient sound from London",
+            "fileLocation": "ambience-sound-at-the-london-stone-27146.mp3"
         }
     ]
 }
