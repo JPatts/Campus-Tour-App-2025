@@ -23,13 +23,13 @@ String getAssetPath(Hotspot hotspot, HotspotFeature feature) {
   return 'assets/hotspots/${hotspot.hotspotId}/Assets/${feature.fileLocation}';
 }
 
-/// Extension to get the first AR model feature from a hotspot
+/// Extension to get the first AR icon feature from a hotspot
 extension HotspotExtensions on Hotspot {
-  HotspotFeature? getARModelFeature() {
+  HotspotFeature? getARIconFeature() {
     try {
       return features.firstWhere(
         (f) =>
-            f.type.toLowerCase() == 'model',
+            f.type.toLowerCase() == 'icon',
       );
     } catch (e) {
       return null;
