@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'map.dart'; // left-hand page
 import 'camera.dart'; // right-hand page
+import 'listview.dart';
 
 void main() {
   debugPrint('App starting...');
@@ -46,7 +47,7 @@ class _HomeWithNavState extends State<HomeWithNav> {
   // All three pages.  No extra file for the Home page—it’s defined inline.
   late final List<Widget> _pages = [
     const MapScreen(), // ← left
-    const _InlineHomePage(), //   center (banner shows here)
+    const LocationList(), //   center (banner shows here)
     const CameraScreen(), // → right
   ];
 
@@ -112,17 +113,17 @@ class _HomeWithNavState extends State<HomeWithNav> {
 }
 
 /// Home page widget
-class _InlineHomePage extends StatelessWidget {
-  const _InlineHomePage();
+// class _InlineHomePage extends StatelessWidget {
+//   const _InlineHomePage();
 
-  @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: Text(
-        '🏠 Home Screen',
-        style: TextStyle(fontSize: 24),
-        textAlign: TextAlign.center,
-      ),
-    );
-  }
-}
+//   @override
+//   Widget build(BuildContext context) {
+//     return const Center(
+//       child: Text(
+//         '🏠 Home Screen',
+//         style: TextStyle(fontSize: 24),
+//         textAlign: TextAlign.center,
+//       ),
+//     );
+//   }
+// }
