@@ -1,11 +1,19 @@
 // lib/main.dart
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'map.dart'; // left-hand page
 import 'camera.dart'; // right-hand page
 
 void main() {
-  debugPrint('App starting...');
-  runApp(const MyApp());
+  runZonedGuarded(() {
+    WidgetsFlutterBinding.ensureInitialized();
+    debugPrint('App starting...');
+    runApp(const MyApp());
+  }, (error, stack) {
+    debugPrint('Uncaught error: $error');
+    debugPrint('Stack trace: $stack');
+  });
 }
 
 /// Top-level app wrapper

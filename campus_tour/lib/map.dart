@@ -38,12 +38,22 @@ class _MapScreenState extends State<MapScreen> {
 
   Future<void> _initializeMap() async {
     try {
+      debugPrint('Starting map initialization...');
       await _requestLocationPermission();
+      debugPrint('Location permission granted');
       await _getCurrentLocation();
+      debugPrint('Current location obtained');
       await _loadHotspots();
-    } catch (e) {
+      debugPrint('Hotspots loaded successfully');
+      
       setState(() {
-        _errorMessage = 'Error initializing map: $e';
+        _isLoading = false;
+      });
+    } catch (e, stackTrace) {
+      debugPrint('Error initializing map: $e');
+      debugPrint('Stack trace: $stackTrace');
+      setState(() {
+        _errorMessage = 'Error initializing map: $e\n\nThis might be due to:\n• Google Maps API key issues\n• Location permission problems\n• Network connectivity\n\nCheck the console for detailed errors.';
         _isLoading = false;
       });
     }
@@ -592,6 +602,10 @@ class _MapScreenState extends State<MapScreen> {
             CircularProgressIndicator(),
             SizedBox(height: 16),
             Text('Loading map...'),
+            SizedBox(height: 8),
+            Text('If this takes too long, check your internet connection\nand Google Maps API key configuration.', 
+                 style: TextStyle(fontSize: 12, color: Colors.grey),
+                 textAlign: TextAlign.center),
           ],
         ),
       );
@@ -599,28 +613,69 @@ class _MapScreenState extends State<MapScreen> {
 
     if (_errorMessage.isNotEmpty) {
       return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline, size: 48, color: Colors.red),
-            const SizedBox(height: 16),
-            Text(
-              _errorMessage,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.red),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  _errorMessage = '';
-                  _isLoading = true;
-                });
-                _initializeMap();
-              },
-              child: const Text('Retry'),
-            ),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 48, color: Colors.red),
+              const SizedBox(height: 16),
+              Text(
+                _errorMessage,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.red),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () {
+                  setState(() {
+                    _errorMessage = '';
+                    _isLoading = true;
+                  });
+                  _initializeMap();
+                },
+                child: const Text('Retry'),
+              ),
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: () {
+                  // Show detailed troubleshooting info
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('Troubleshooting'),
+                      content: const SingleChildScrollView(
+                        child: Text(
+                          'Common issues:\n\n'
+                          '1. Google Maps API Key:\n'
+                          '   • Check if API key is valid\n'
+                          '   • Ensure iOS restrictions are set correctly\n'
+                          '   • Verify Maps SDK for iOS is enabled\n\n'
+                          '2. Location Permissions:\n'
+                          '   • Allow location access in Settings\n'
+                          '   • Enable Location Services\n\n'
+                          '3. Network Connection:\n'
+                          '   • Check internet connectivity\n'
+                          '   • Try switching between WiFi/Cellular\n\n'
+                          '4. Device Issues:\n'
+                          '   • Restart the app\n'
+                          '   • Restart the device\n'
+                          '   • Clear app data if needed',
+                        ),
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text('Close'),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+                child: const Text('Troubleshooting'),
+              ),
+            ],
+          ),
         ),
       );
     }
@@ -628,6 +683,7 @@ class _MapScreenState extends State<MapScreen> {
     return Scaffold(
       body: GoogleMap(
         onMapCreated: (GoogleMapController controller) {
+          debugPrint('Google Map created successfully');
           _mapController = controller;
         },
         initialCameraPosition: _psuLocation,
