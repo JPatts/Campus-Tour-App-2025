@@ -2,11 +2,16 @@
 import 'package:flutter/material.dart';
 import 'map.dart'; // left-hand page
 import 'camera.dart'; // right-hand page
-import 'listview.dart';
+import 'listview.dart'; // list of discovered locations
+import 'services/hotspot_service.dart';
 
-void main() {
+void main() async{
   debugPrint('App starting...');
   runApp(const MyApp());
+  await myService.loadHotspots();
+  debugPrint("Hotspots loaded:");
+  debugPrint(myService.hotspots.length.toString());
+  debugPrint(myService.hotspots[0].name);
 }
 
 /// Top-level app wrapper
@@ -47,7 +52,7 @@ class _HomeWithNavState extends State<HomeWithNav> {
   // All three pages.  No extra file for the Home page—it’s defined inline.
   late final List<Widget> _pages = [
     const MapScreen(), // ← left
-    const LocationList(), //   center (banner shows here)
+    LocationList(), //   center (banner shows here)
     const CameraScreen(), // → right
   ];
 

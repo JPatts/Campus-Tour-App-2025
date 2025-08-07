@@ -15,6 +15,10 @@ class HotspotService {
   List<Hotspot> get hotspots => _hotspots;
   bool get isLoaded => _isLoaded;
 
+  List<Hotspot> getHostpots(){
+    return _hotspots;
+  }
+
   Future<List<Hotspot>> loadHotspots() async {
     if (_isLoaded) {
       return _hotspots;
@@ -100,3 +104,6 @@ class HotspotService {
     return degrees * (pi / 180);
   }
 } 
+
+
+final myService = HotspotService();
