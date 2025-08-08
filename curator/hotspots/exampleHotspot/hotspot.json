@@ -7,14 +7,13 @@
         "longitude": -122.4194,
         "radius": 100 
     },
-    "createdAt": "2023-10-01T12:00:00Z",
-    "updatedAt": "2023-10-01T12:00:00Z",
+    "createdOn": "2023-10-01",
 
     "status": "active",
     "features": [
         {
             "featureId": "1",
-            "type": "photo",
+            "type": "image",
             "content": "Here's a photo of my cat Bali.",
             "fileLocation": "photoOfBali.jpg"
         },
@@ -22,7 +21,7 @@
             "featureId": "2",
             "type": "video",
             "content": "Here's a video of my cat Bali",
-            "fileLocation": "videoOfBali.mp4"
+            "fileLocation": "videoOfBali.mov"
         },
         {
             "featureId": "3",

@@ -1,17 +1,26 @@
 // lib/main.dart
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'map.dart'; // left-hand page
 import 'camera.dart'; // right-hand page
 import 'listview.dart'; // list of discovered locations
 import 'services/hotspot_service.dart';
 
+
 final myService = HotspotService();
 
-void main() async{
-  debugPrint('App starting...');
-  runApp(const MyApp());
-  await myService.loadHotspots();
-  debugPrint("Hotspots loaded:");
+void main() {
+  runZonedGuarded(() {
+    WidgetsFlutterBinding.ensureInitialized();
+    debugPrint('App starting...');
+    runApp(const MyApp());
+    myService.loadHotspots();
+    debugPrint("Hotspots loaded");
+  }, (error, stack) {
+    debugPrint('Uncaught error: $error');
+    debugPrint('Stack trace: $stack');
+  });
 }
 
 /// Top-level app wrapper
