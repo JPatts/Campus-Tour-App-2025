@@ -3,13 +3,16 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/services.dart';
+import 'dart:async';
 import 'dart:io' show Platform;
 import 'dart:math' as math;
 import 'models/hotspot.dart';
 import 'services/hotspot_service.dart';
 
 class MapScreen extends StatefulWidget {
-  const MapScreen({Key? key}) : super(key: key);
+  final bool adminModeEnabled;
+  const MapScreen({Key? key, this.adminModeEnabled = false}) : super(key: key);
 
   @override
   State<MapScreen> createState() => _MapScreenState();
@@ -22,7 +25,10 @@ class _MapScreenState extends State<MapScreen> {
   String _errorMessage = '';
   List<Hotspot> _hotspots = [];
   final HotspotService _hotspotService = HotspotService();
-  bool _testingMode = false; // For simulating location
+  StreamSubscription<Position>? _positionSubscription;
+  final Map<String, bool> _wasInsideHotspot = {}; // Track enter/exit transitions
+  final Map<String, DateTime> _lastHotspotNotifyAt = {}; // Debounce notifications
+  String? _currentlyShownSnackForHotspotId;
 
   // Portland State University coordinates
   static const CameraPosition _psuLocation = CameraPosition(
@@ -36,6 +42,8 @@ class _MapScreenState extends State<MapScreen> {
     _initializeMap();
   }
 
+  // No local testing toggle—admin mode controls access globally
+
   Future<void> _initializeMap() async {
     try {
       debugPrint('Starting map initialization...');
@@ -43,12 +51,15 @@ class _MapScreenState extends State<MapScreen> {
       debugPrint('Location permission granted');
       await _getCurrentLocation();
       debugPrint('Current location obtained');
+      _startPositionStream();
       await _loadHotspots();
       debugPrint('Hotspots loaded successfully');
       
       setState(() {
         _isLoading = false;
       });
+
+      _evaluateProximityAndNotify();
     } catch (e, stackTrace) {
       debugPrint('Error initializing map: $e');
       debugPrint('Stack trace: $stackTrace');
@@ -65,6 +76,10 @@ class _MapScreenState extends State<MapScreen> {
       setState(() {
         _hotspots = hotspots;
       });
+      // Initialize state for new hotspots
+      for (final hs in hotspots) {
+        _wasInsideHotspot.putIfAbsent(hs.hotspotId, () => false);
+      }
     } catch (e) {
       debugPrint('Error loading hotspots: $e');
     }
@@ -140,30 +155,14 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   Set<Marker> _createMarkers() {
-    Set<Marker> markers = {};
-
-    // Add user location marker if available
-    if (_currentPosition != null) {
-      markers.add(
-        Marker(
-          markerId: const MarkerId('user_location'),
-          position: LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
-          infoWindow: const InfoWindow(
-            title: 'Your Location',
-          ),
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
-        ),
-      );
-    }
-
-    // Note: Hotspots are displayed as circles only, no markers
-
-    return markers;
+    // Remove custom user marker to avoid confusion with built-in blue dot
+    // Hotspots are displayed as circles only
+    return <Marker>{};
   }
 
   void _onHotspotTapped(Hotspot hotspot) {
     // Check if user is within hotspot radius or testing mode is enabled
-    if (_testingMode) {
+    if (widget.adminModeEnabled) {
       _showHotspotContent(hotspot);
     } else if (_currentPosition != null) {
       bool isWithinRadius = _hotspotService.isUserInHotspot(
@@ -243,29 +242,40 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   Widget _buildFeatureWidget(Hotspot hotspot, HotspotFeature feature) {
-    return Container(
+    return Card(
+      elevation: 3,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
       margin: const EdgeInsets.only(bottom: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(_getIconForFeatureType(feature.type), size: 20),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  feature.content,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  _getIconForFeatureType(feature.type),
+                  size: 20,
+                  color: Theme.of(context).primaryColor,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    feature.content,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          _buildMediaContent(hotspot, feature),
-        ],
+              ],
+            ),
+            const SizedBox(height: 12),
+            _buildMediaContent(hotspot, feature),
+          ],
+        ),
       ),
     );
   }
@@ -304,84 +314,125 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   Widget _buildPhotoContent(String assetPath) {
-    return Container(
-      constraints: const BoxConstraints(
-        maxHeight: 200,
-        minHeight: 150,
-      ),
+    return GestureDetector(
+      onTap: () {
+        showDialog(
+          context: context,
+          builder: (_) => Dialog(
+            insetPadding: const EdgeInsets.all(16),
+            backgroundColor: Colors.black,
+            child: InteractiveViewer(
+              maxScale: 5,
+              child: Image.asset(
+                assetPath,
+                fit: BoxFit.contain,
+              ),
+            ),
+          ),
+        );
+      },
       child: ClipRRect(
         borderRadius: BorderRadius.circular(8),
-        child: Image.asset(
-          assetPath,
-          fit: BoxFit.cover,
-          width: double.infinity,
-          errorBuilder: (context, error, stackTrace) {
-            return Container(
-              height: 150,
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.image_not_supported, size: 48, color: Colors.grey),
-                    SizedBox(height: 8),
-                    Text('Image not available', style: TextStyle(color: Colors.grey)),
-                  ],
+        child: Stack(
+          children: [
+            Image.asset(
+              assetPath,
+              fit: BoxFit.cover,
+              width: double.infinity,
+              height: 200,
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  height: 150,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.image_not_supported, size: 48, color: Colors.grey),
+                        SizedBox(height: 8),
+                        Text('Image not available', style: TextStyle(color: Colors.grey)),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+            Positioned(
+              bottom: 8,
+              right: 8,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(20),
                 ),
+                padding: const EdgeInsets.all(4),
+                child: const Icon(Icons.fullscreen, color: Colors.white, size: 20),
               ),
-            );
-          },
+            ),
+          ],
         ),
       ),
     );
   }
 
   Widget _buildVideoContent(String assetPath) {
-    return Container(
-      height: 150,
-      decoration: BoxDecoration(
-        color: Colors.black,
+    return GestureDetector(
+      onTap: () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Video playback not yet implemented')),
+        );
+      },
+      child: ClipRRect(
         borderRadius: BorderRadius.circular(8),
-      ),
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.grey[300],
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.video_library, size: 48, color: Colors.grey),
-                  SizedBox(height: 8),
-                  Text('Video content', style: TextStyle(color: Colors.grey)),
-                  SizedBox(height: 4),
-                  Text('(Tap to play)', style: TextStyle(color: Colors.grey, fontSize: 12)),
-                ],
+        child: Stack(
+          children: [
+            // Background gradient placeholder
+            Container(
+              height: 180,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.grey[800]!, Colors.grey[600]!],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
               ),
             ),
-          ),
-          Positioned(
-            child: IconButton(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Video playback not yet implemented')),
-                );
-              },
-              icon: const Icon(
-                Icons.play_circle_filled,
+            // Semi-transparent overlay
+            Container(
+              height: 180,
+              width: double.infinity,
+              color: Colors.black.withOpacity(0.3),
+            ),
+            // Play icon
+            const Center(
+              child: Icon(
+                Icons.play_circle_fill_rounded,
                 size: 64,
                 color: Colors.white,
               ),
             ),
-          ),
-        ],
+            // Label
+            Positioned(
+              bottom: 8,
+              left: 8,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Text(
+                  'Video',
+                  style: TextStyle(color: Colors.white, fontSize: 12),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -392,7 +443,6 @@ class _MapScreenState extends State<MapScreen> {
       decoration: BoxDecoration(
         color: Colors.blue[50],
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.blue[200]!),
       ),
       child: Row(
         children: [
@@ -431,12 +481,18 @@ class _MapScreenState extends State<MapScreen> {
 
   void _showHotspotInfo(Hotspot hotspot) {
     double? distance;
+    bool isWithinRadius = false;
     if (_currentPosition != null) {
       distance = _hotspotService.calculateDistance(
         _currentPosition!.latitude,
         _currentPosition!.longitude,
         hotspot.location.latitude,
         hotspot.location.longitude,
+      );
+      isWithinRadius = _hotspotService.isUserInHotspot(
+        hotspot,
+        _currentPosition!.latitude,
+        _currentPosition!.longitude,
       );
     }
 
@@ -451,7 +507,13 @@ class _MapScreenState extends State<MapScreen> {
             children: [
               Text(hotspot.description),
               const SizedBox(height: 16),
-              if (distance != null) ...[
+              if (_currentPosition == null)
+                const Text('Current location unavailable'),
+              if (_currentPosition != null && isWithinRadius) ...[
+                const Text('You are inside this hotspot zone.'),
+                const SizedBox(height: 8),
+                Text('Zone radius: ${_formatDistance(hotspot.location.radius)}'),
+              ] else if (_currentPosition != null && distance != null) ...[
                 Text('Distance: ${_formatDistance(distance)} away'),
                 const SizedBox(height: 8),
                 Text('Get within ${_formatDistance(hotspot.location.radius)} to unlock content'),
@@ -463,6 +525,14 @@ class _MapScreenState extends State<MapScreen> {
               onPressed: () => Navigator.of(context).pop(),
               child: const Text('Close'),
             ),
+            if (_currentPosition != null && isWithinRadius)
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  _showHotspotContent(hotspot);
+                },
+                child: const Text('Open Content'),
+              ),
           ],
         );
       },
@@ -547,8 +617,8 @@ class _MapScreenState extends State<MapScreen> {
     for (final hotspot in _hotspots) {
       if (hotspot.status == 'active') {
         // Check if user is within hotspot radius or testing mode is enabled
-        bool isWithinRadius = _testingMode;
-        if (!_testingMode && _currentPosition != null) {
+        bool isWithinRadius = widget.adminModeEnabled;
+        if (!widget.adminModeEnabled && _currentPosition != null) {
           isWithinRadius = _hotspotService.isUserInHotspot(
             hotspot,
             _currentPosition!.latitude,
@@ -590,6 +660,71 @@ class _MapScreenState extends State<MapScreen> {
         }
       }
     }
+  }
+
+  void _startPositionStream() {
+    // Continuously update user location so proximity reflects being anywhere within the circle
+    const LocationSettings locationSettings = LocationSettings(
+      accuracy: LocationAccuracy.best,
+      distanceFilter: 3, // meters
+    );
+    _positionSubscription?.cancel();
+    _positionSubscription = Geolocator.getPositionStream(locationSettings: locationSettings)
+        .listen((Position position) {
+      setState(() {
+        _currentPosition = position;
+      });
+      _evaluateProximityAndNotify();
+    }, onError: (e) {
+      debugPrint('Position stream error: $e');
+    });
+  }
+
+  void _evaluateProximityAndNotify() {
+    if (_currentPosition == null || _hotspots.isEmpty) return;
+
+    for (final hotspot in _hotspots) {
+      if (hotspot.status != 'active') continue;
+
+      final bool isInside = _hotspotService.isUserInHotspot(
+        hotspot,
+        _currentPosition!.latitude,
+        _currentPosition!.longitude,
+      );
+
+      final bool wasInside = _wasInsideHotspot[hotspot.hotspotId] ?? false;
+      _wasInsideHotspot[hotspot.hotspotId] = isInside;
+
+      // Notify on enter with debounce (8s per hotspot)
+      if (isInside && !wasInside) {
+        final DateTime now = DateTime.now();
+        final DateTime last = _lastHotspotNotifyAt[hotspot.hotspotId] ?? DateTime.fromMillisecondsSinceEpoch(0);
+        if (now.difference(last).inSeconds >= 8) {
+          _lastHotspotNotifyAt[hotspot.hotspotId] = now;
+          _showEnteredHotspotSnack(hotspot);
+        }
+      }
+    }
+  }
+
+  void _showEnteredHotspotSnack(Hotspot hotspot) {
+    if (!mounted) return;
+    // Avoid showing multiple at once; replace any current
+    _currentlyShownSnackForHotspotId = hotspot.hotspotId;
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('You have entered "${hotspot.name}"'),
+        action: SnackBarAction(
+          label: 'Open',
+          onPressed: () {
+            _showHotspotContent(hotspot);
+          },
+        ),
+        duration: const Duration(seconds: 4),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   @override
@@ -680,64 +815,53 @@ class _MapScreenState extends State<MapScreen> {
       );
     }
 
-    return Scaffold(
-      body: GoogleMap(
-        onMapCreated: (GoogleMapController controller) {
-          debugPrint('Google Map created successfully');
-          _mapController = controller;
-        },
-        initialCameraPosition: _psuLocation,
-        mapType: MapType.hybrid,
-        markers: _createMarkers(),
-        polygons: _createPolygons(),
-        circles: _createCircles(),
-        myLocationEnabled: true,
-        myLocationButtonEnabled: true,
-        compassEnabled: true,
-        mapToolbarEnabled: true,
-        zoomControlsEnabled: true,
-        onTap: (LatLng location) {
-          debugPrint('Tapped at: ${location.latitude}, ${location.longitude}');
-          _handleMapTap(location);
-        },
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.dark.copyWith(statusBarColor: Colors.white),
+      child: Scaffold(
+        body: Stack(
+          children: [
+            GoogleMap(
+              onMapCreated: (GoogleMapController controller) {
+                debugPrint('Google Map created successfully');
+                _mapController = controller;
+              },
+              initialCameraPosition: _psuLocation,
+              mapType: MapType.hybrid,
+              markers: _createMarkers(),
+              polygons: _createPolygons(),
+              circles: _createCircles(),
+              myLocationEnabled: true,
+              myLocationButtonEnabled: true,
+              compassEnabled: true,
+              mapToolbarEnabled: true,
+              zoomControlsEnabled: true,
+              onTap: (LatLng location) {
+                debugPrint('Tapped at: ${location.latitude}, ${location.longitude}');
+                _handleMapTap(location);
+              },
+            ),
+            // White status bar background to ensure battery/time visibility on notched devices
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                height: MediaQuery.of(context).padding.top,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ),
+        floatingActionButton: null,
+        floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       ),
-      floatingActionButton: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          // Testing Mode Toggle Button
-          FloatingActionButton.extended(
-            heroTag: "testingMode",
-            onPressed: () {
-              setState(() {
-                _testingMode = !_testingMode;
-              });
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    _testingMode 
-                      ? 'Testing Mode ON - All hotspots unlocked' 
-                      : 'Testing Mode OFF - Location-based access'
-                  ),
-                  backgroundColor: _testingMode ? Colors.green : Colors.orange,
-                  duration: const Duration(seconds: 2),
-                ),
-              );
-            },
-            backgroundColor: _testingMode ? Colors.green : Colors.grey,
-            foregroundColor: Colors.white,
-            icon: Icon(_testingMode ? Icons.lock_open : Icons.lock),
-            label: Text(_testingMode ? 'Testing ON' : 'Testing OFF'),
-          ),
-          const SizedBox(height: 16),
-        ],
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 
   @override
   void dispose() {
     _mapController?.dispose();
+    _positionSubscription?.cancel();
     super.dispose();
   }
 }

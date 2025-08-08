@@ -57,23 +57,78 @@ class _HomeWithNavState extends State<HomeWithNav> {
   // Page index: 0 = Map, 1 = Home, 2 = Camera
   final PageController _pageCtrl = PageController(initialPage: 1);
   int _currentPage = 1; // start on Home (center)
+  bool _adminMode = false; // Hidden admin mode state
+  int _mapIconTapCount = 0; // triple-tap detection
+  DateTime? _lastMapIconTap;
 
-  // All three pages.  No extra file for the Home page—it’s defined inline.
-  late final List<Widget> _pages = [
-    const MapScreen(), // ← left
-    LocationList(), //   center (banner shows here)
-    const CameraScreen(), // → right
-  ];
+  List<Widget> _buildPages() => [
+        MapScreen(adminModeEnabled: _adminMode), // ← left
+        LocationList(), //   center (banner shows here)
+        const CameraScreen(), // → right
+      ];
 
   /// Animate safely to a new page & update state
   void _goToPage(int index) {
-    if (index < 0 || index >= _pages.length) return;
+    if (index < 0 || index >= 3) return;
     _pageCtrl.animateToPage(
       index,
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOut,
     );
     setState(() => _currentPage = index);
+  }
+
+  Future<void> _promptForAdminCode() async {
+    final TextEditingController controller = TextEditingController();
+    String? errorText;
+
+    await showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setStateDialog) => AlertDialog(
+            title: const Text('Enter Admin Code'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: controller,
+                  autofocus: true,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: '4-digit code',
+                    errorText: errorText,
+                  ),
+                  maxLength: 4,
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  if (controller.text.trim() == '4231') {
+                    Navigator.of(ctx).pop();
+                    setState(() => _adminMode = true);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Admin mode enabled')),
+                    );
+                  } else {
+                    setStateDialog(() {
+                      errorText = 'Incorrect code';
+                    });
+                  }
+                },
+                child: const Text('Activate'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -100,16 +155,56 @@ class _HomeWithNavState extends State<HomeWithNav> {
         physics:
             const NeverScrollableScrollPhysics(), // disable swipe; arrows only
         onPageChanged: (idx) => setState(() => _currentPage = idx),
-        children: _pages,
+        children: _buildPages(),
       ),
 
       // Bottom navigation bar with 3 icons
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentPage,
-        onTap: (index) => _goToPage(index),
+        onTap: (index) {
+          final DateTime now = DateTime.now();
+          if (index == 0) {
+            // Taps on Map tab
+            if (_currentPage != 0) {
+              // First tap switches to Map, start counting
+              _mapIconTapCount = 1;
+              _lastMapIconTap = now;
+              _goToPage(0);
+            } else {
+              // Already on Map: count rapid taps
+              if (_lastMapIconTap != null &&
+                  now.difference(_lastMapIconTap!).inMilliseconds <= 900) {
+                _mapIconTapCount += 1;
+              } else {
+                _mapIconTapCount = 1;
+              }
+              _lastMapIconTap = now;
+
+              if (_mapIconTapCount >= 3) {
+                // Triple tap detected
+                _mapIconTapCount = 0;
+                _lastMapIconTap = null;
+                if (_adminMode) {
+                  setState(() => _adminMode = false);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Admin mode disabled')),
+                  );
+                } else {
+                  _promptForAdminCode();
+                }
+              }
+            }
+          } else {
+            // Any other tab tap resets the counter and navigates
+            _mapIconTapCount = 0;
+            _lastMapIconTap = null;
+            _goToPage(index);
+          }
+        },
         items: const [
           BottomNavigationBarItem(
-            icon: Icon(Icons.map),
+            icon: Icon(Icons.map_outlined),
+            activeIcon: Icon(Icons.map),
             label: 'Map',
           ),
           BottomNavigationBarItem(

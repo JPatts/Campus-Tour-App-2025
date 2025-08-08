@@ -42,6 +42,7 @@ class HotspotService {
       'exampleHotspot',
       'psuLibrary',
       'psuRecCenter',
+      'se117thAve',
     ];
     
     for (final directory in hotspotDirectories) {
