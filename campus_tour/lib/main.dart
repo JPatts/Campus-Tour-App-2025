@@ -5,13 +5,13 @@ import 'camera.dart'; // right-hand page
 import 'listview.dart'; // list of discovered locations
 import 'services/hotspot_service.dart';
 
+final myService = HotspotService();
+
 void main() async{
   debugPrint('App starting...');
   runApp(const MyApp());
   await myService.loadHotspots();
   debugPrint("Hotspots loaded:");
-  debugPrint(myService.hotspots.length.toString());
-  debugPrint(myService.hotspots[0].name);
 }
 
 /// Top-level app wrapper
@@ -116,19 +116,3 @@ class _HomeWithNavState extends State<HomeWithNav> {
     );
   }
 }
-
-/// Home page widget
-// class _InlineHomePage extends StatelessWidget {
-//   const _InlineHomePage();
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return const Center(
-//       child: Text(
-//         '🏠 Home Screen',
-//         style: TextStyle(fontSize: 24),
-//         textAlign: TextAlign.center,
-//       ),
-//     );
-//   }
-// }
