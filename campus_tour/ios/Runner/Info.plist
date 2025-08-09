@@ -49,5 +49,7 @@
 	<string>This app needs access to your location to provide campus tour features.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>This app needs access to your location to provide campus tour features.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Camera access is needed to overlay hotspots in AR.</string>
 </dict>
 </plist>
