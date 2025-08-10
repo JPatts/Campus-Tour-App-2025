@@ -22,6 +22,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
   Future<void>? _cameraInitFuture;
   StreamSubscription<Position>? _positionSub;
   StreamSubscription<CompassEvent>? _headingSub;
+  Timer? _uiTick;
 
   Position? _currentPosition;
   double _headingDegrees = 0; // 0..360, 0 = North
@@ -43,6 +44,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
     _positionSub?.cancel();
     _headingSub?.cancel();
     _cameraController?.dispose();
+    _uiTick?.cancel();
     super.dispose();
   }
 
@@ -66,6 +68,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
       _startLocationStream();
       _startHeadingStream();
       await _setupCamera();
+      _startUiTicker();
       setState(() => _initializing = false);
     } catch (e) {
       setState(() {
@@ -98,7 +101,10 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
   void _startLocationStream() {
     _positionSub?.cancel();
     _positionSub = Geolocator.getPositionStream(
-      locationSettings: const LocationSettings(accuracy: LocationAccuracy.best, distanceFilter: 2),
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.bestForNavigation,
+        distanceFilter: 1,
+      ),
     ).listen((pos) => setState(() => _currentPosition = pos));
   }
 
@@ -127,6 +133,14 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
     _cameraInitFuture = controller.initialize();
     await _cameraInitFuture;
     if (mounted) setState(() {});
+  }
+
+  void _startUiTicker() {
+    _uiTick?.cancel();
+    _uiTick = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      setState(() {});
+    });
   }
 
   // Compute bearing from user location to hotspot
@@ -234,9 +248,13 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                           child: GestureDetector(
                              behavior: HitTestBehavior.opaque,
                             onTap: () => _showHotspotSheet(hs, distanceM),
-                            child: CustomPaint(
-                              painter: _MapPinPainter(color: Colors.red, label: hs.name),
-                            ),
+                                child: CustomPaint(
+                                  painter: _MapPinPainter(
+                                    color: Colors.red,
+                                    title: hs.name,
+                                    subtitle: _formatRemainingFeet(distanceM, 200),
+                                  ),
+                                ),
                           ),
                       ),
                     ),
@@ -312,12 +330,19 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
     if (meters < 1000) return '${meters.toStringAsFixed(0)} m away';
     return '${(meters / 1000).toStringAsFixed(2)} km away';
   }
+
+  String _formatRemainingFeet(double meters, double thresholdFeet) {
+    final double feet = meters * 3.28084;
+    final double remaining = (feet - thresholdFeet).clamp(0, double.infinity);
+    return '${remaining.toStringAsFixed(0)} ft left';
+  }
 }
 
 class _MapPinPainter extends CustomPainter {
   final Color color;
-  final String label;
-  _MapPinPainter({required this.color, required this.label});
+  final String title;
+  final String subtitle;
+  _MapPinPainter({required this.color, required this.title, required this.subtitle});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -355,34 +380,58 @@ class _MapPinPainter extends CustomPainter {
     final Offset ringCenter = Offset(center.dx, tip.dy + r * 0.2);
     canvas.drawCircle(ringCenter, ringR, ringPaint);
 
-    // Label background
-    final TextPainter tp = TextPainter(
+    // Label background (two lines: title + distance)
+    final double maxLabelWidth = size.width * 0.9;
+    final TextPainter titlePainter = TextPainter(
       text: TextSpan(
-        text: label,
-        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 12),
+        text: title,
+        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12),
       ),
       textDirection: TextDirection.ltr,
       maxLines: 1,
       ellipsis: '…',
-    )..layout(maxWidth: size.width * 0.9);
+    )..layout(maxWidth: maxLabelWidth);
 
-    final labelPadding = 6.0;
-    final rect = RRect.fromRectAndRadius(
+    final TextPainter subtitlePainter = TextPainter(
+      text: TextSpan(
+        text: subtitle,
+        style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.w500, fontSize: 11),
+      ),
+      textDirection: TextDirection.ltr,
+      maxLines: 1,
+    )..layout(maxWidth: maxLabelWidth);
+
+    const double labelPadding = 6.0;
+    const double lineSpacing = 2.0;
+
+    final double contentWidth = math.max(titlePainter.width, subtitlePainter.width);
+    final double contentHeight = titlePainter.height + lineSpacing + subtitlePainter.height;
+
+    final RRect rect = RRect.fromRectAndRadius(
       Rect.fromCenter(
         center: Offset(center.dx, ringCenter.dy + ringR + 14),
-        width: tp.width + 2 * labelPadding,
-        height: tp.height + 2 * labelPadding,
+        width: contentWidth + 2 * labelPadding,
+        height: contentHeight + 2 * labelPadding,
       ),
       const Radius.circular(8),
     );
 
     final Paint bg = Paint()..color = Colors.black54;
     canvas.drawRRect(rect, bg);
-    tp.paint(canvas, Offset(rect.left + labelPadding, rect.top + labelPadding));
+    final double titleLeft = rect.center.dx - (titlePainter.width / 2);
+    final double subtitleLeft = rect.center.dx - (subtitlePainter.width / 2);
+    titlePainter.paint(canvas, Offset(titleLeft, rect.top + labelPadding));
+    subtitlePainter.paint(
+      canvas,
+      Offset(
+        subtitleLeft,
+        rect.top + labelPadding + titlePainter.height + lineSpacing,
+      ),
+    );
   }
 
   @override
   bool shouldRepaint(covariant _MapPinPainter oldDelegate) {
-    return oldDelegate.color != color || oldDelegate.label != label;
+    return oldDelegate.color != color || oldDelegate.title != title || oldDelegate.subtitle != subtitle;
   }
 }

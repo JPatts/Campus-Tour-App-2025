@@ -513,10 +513,10 @@ class _MapScreenState extends State<MapScreen> {
                 const Text('You are inside this hotspot zone.'),
                 const SizedBox(height: 8),
                 Text('Zone radius: ${_formatDistance(hotspot.location.radius)}'),
-              ] else if (_currentPosition != null && distance != null) ...[
-                Text('Distance: ${_formatDistance(distance)} away'),
+               ] else if (_currentPosition != null && distance != null) ...[
+                Text('Remaining: ${_formatRemainingFeet(distance, 200)}'),
                 const SizedBox(height: 8),
-                Text('Get within ${_formatDistance(hotspot.location.radius)} to unlock content'),
+                Text('Get within 200 ft to unlock content'),
               ],
             ],
           ),
@@ -553,21 +553,18 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   String _formatDistance(double meters) {
-    // Convert meters to feet
-    double feet = meters * 3.28084;
-    
-    // If less than 1000 feet, show in feet
-    if (feet < 1000) {
-      return '${feet.toStringAsFixed(0)} ft';
-    }
-    
-    // If 1000 feet or more, show in miles
-    double miles = feet / 5280;
-    if (miles < 0.1) {
-      return '${(miles * 10).round() / 10} miles'; // Round to 0.1 miles
-    } else {
-      return '${miles.toStringAsFixed(1)} miles';
-    }
+    // kept for any other usages
+    final double feet = meters * 3.28084;
+    if (feet < 1000) return '${feet.toStringAsFixed(0)} ft';
+    final double miles = feet / 5280;
+    if (miles < 0.1) return '${(miles * 10).round() / 10} miles';
+    return '${miles.toStringAsFixed(1)} miles';
+  }
+
+  String _formatRemainingFeet(double meters, double thresholdFeet) {
+    final double feet = meters * 3.28084;
+    final double remaining = (feet - thresholdFeet).clamp(0, double.infinity);
+    return '${remaining.toStringAsFixed(0)} ft left';
   }
 
   Set<Polygon> _createPolygons() {
