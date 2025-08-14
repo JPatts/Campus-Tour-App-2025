@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:camera/camera.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter_compass/flutter_compass.dart';
@@ -186,9 +188,11 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
       return Center(child: Text(_error, style: const TextStyle(color: Colors.red)));
     }
 
-    return Stack(
-      fit: StackFit.expand,
-      children: [
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light.copyWith(statusBarColor: const Color(0xFF6D8D24)),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
         // Camera preview
         if (_cameraController != null)
           FutureBuilder<void>(
@@ -202,6 +206,17 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
           )
         else
           const ColoredBox(color: Colors.black),
+
+        // Green status bar background to match brand color
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          child: Container(
+            height: MediaQuery.of(context).padding.top,
+            color: const Color(0xFF6D8D24),
+          ),
+        ),
 
         // AR overlay
         Positioned.fill(
@@ -250,9 +265,12 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                             onTap: () => _showHotspotSheet(hs, distanceM),
                                 child: CustomPaint(
                                   painter: _MapPinPainter(
-                                    color: Colors.red,
+                                    color: Theme.of(context).colorScheme.primary,
                                     title: hs.name,
-                                    subtitle: _formatRemainingFeet(distanceM, 200),
+                                    subtitle: _formatRemainingFeet(
+                                      distanceM,
+                                      hs.location.radius * 3.28084, // threshold in feet, per-hotspot
+                                    ),
                                   ),
                                 ),
                           ),
@@ -284,7 +302,8 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
           ),
         ),
 
-      ],
+        ],
+      ),
     );
   }
 
@@ -298,7 +317,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
       ),
       builder: (_) {
         return Padding(
-          padding: const EdgeInsets.all(16),
+                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -307,18 +326,44 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
               const SizedBox(height: 4),
               Text(hs.description, style: const TextStyle(color: Colors.black87)),
               const SizedBox(height: 8),
-              Text(_formatDistance(distanceM), style: const TextStyle(color: Colors.black54)),
+              Builder(builder: (context) {
+                final double thresholdFeet = hs.location.radius * 3.28084;
+                final double feet = distanceM * 3.28084;
+                final bool isWithin = feet <= thresholdFeet;
+                if (isWithin) {
+                  return const Text('You are inside this hotspot zone.', style: TextStyle(color: Colors.black54));
+                }
+                return Text(
+                  _formatRemainingFeet(distanceM, thresholdFeet),
+                  style: const TextStyle(color: Colors.black54),
+                );
+              }),
               const SizedBox(height: 12),
               Row(
-                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  ElevatedButton.icon(
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close),
-                    label: const Text('Close'),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        Navigator.of(context).pop();
+                        await _launchAppleMaps(hs);
+                      },
+                      icon: const Icon(Icons.map_outlined),
+                      label: const Text('Apple Maps'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        Navigator.of(context).pop();
+                        await _launchGoogleMaps(hs);
+                      },
+                      icon: const Icon(Icons.map),
+                      label: const Text('Google Maps'),
+                    ),
                   ),
                 ],
-              )
+              ),
             ],
           ),
         );
@@ -327,14 +372,48 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
   }
 
   String _formatDistance(double meters) {
-    if (meters < 1000) return '${meters.toStringAsFixed(0)} m away';
-    return '${(meters / 1000).toStringAsFixed(2)} km away';
+    // Convert meters to feet; display in feet or miles like the map view
+    final double feet = meters * 3.28084;
+    if (feet < 1000) return '${feet.toStringAsFixed(0)} ft away';
+    final double miles = feet / 5280.0;
+    return '${miles.toStringAsFixed(1)} miles away';
   }
 
   String _formatRemainingFeet(double meters, double thresholdFeet) {
     final double feet = meters * 3.28084;
     final double remaining = (feet - thresholdFeet).clamp(0, double.infinity);
+    if (remaining >= 5280) {
+      final double miles = remaining / 5280.0;
+      return '${miles.toStringAsFixed(1)} miles left';
+    }
     return '${remaining.toStringAsFixed(0)} ft left';
+  }
+
+  Future<void> _launchAppleMaps(Hotspot hotspot) async {
+    final double lat = hotspot.location.latitude;
+    final double lng = hotspot.location.longitude;
+    final String label = hotspot.name;
+    final Uri uri = Uri.https('maps.apple.com', '/', {
+      'q': label,
+      'll': '$lat,$lng',
+    });
+    await _launchUri(uri);
+  }
+
+  Future<void> _launchGoogleMaps(Hotspot hotspot) async {
+    final double lat = hotspot.location.latitude;
+    final double lng = hotspot.location.longitude;
+    final Uri uri = Uri.https('www.google.com', '/maps/search/', {
+      'api': '1',
+      'query': '$lat,$lng',
+    });
+    await _launchUri(uri);
+  }
+
+  Future<void> _launchUri(Uri uri) async {
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
+    }
   }
 }
 
@@ -348,44 +427,88 @@ class _MapPinPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
     final double base = math.min(size.width, size.height);
-    final double r = base * 0.28; // head radius
+    final double headRadius = base * 0.26;
 
-    // Taller triangle, no circular head
-    final Offset tip = Offset(center.dx, center.dy + r * 2.2);
-    final Offset leftBase = Offset(center.dx - r * 0.9, center.dy - r * 0.2);
-    final Offset rightBase = Offset(center.dx + r * 0.9, center.dy - r * 0.2);
+    // Compute pin geometry
+    final Offset headCenter = Offset(center.dx, center.dy - headRadius * 0.2);
+    final Offset tip = Offset(center.dx, center.dy + headRadius * 2.15);
 
-    final Paint fill = Paint()..color = color.withOpacity(0.95);
-    final Paint stroke = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 0
-      ..color = Colors.transparent
-      ..strokeJoin = StrokeJoin.round;
-
-    // Pointer body (triangle only)
-    final Path body = Path()
-      ..moveTo(leftBase.dx, leftBase.dy)
-      ..lineTo(tip.dx, tip.dy)
-      ..lineTo(rightBase.dx, rightBase.dy)
+    // Build a classic drop-pin path: circle head + curved tail to tip
+    final Path pinPath = Path();
+    // Head circle path (approximate by arc)
+    pinPath.addOval(Rect.fromCircle(center: headCenter, radius: headRadius));
+    // Tail path (rounded triangular using beziers)
+    final double tailWidth = headRadius * 0.9;
+    final Offset leftAttach = Offset(headCenter.dx - tailWidth * 0.55, headCenter.dy + headRadius * 0.3);
+    final Offset rightAttach = Offset(headCenter.dx + tailWidth * 0.55, headCenter.dy + headRadius * 0.3);
+    final Path tail = Path()
+      ..moveTo(leftAttach.dx, leftAttach.dy)
+      ..quadraticBezierTo(
+        headCenter.dx - tailWidth * 0.25,
+        headCenter.dy + headRadius * 1.1,
+        tip.dx,
+        tip.dy,
+      )
+      ..quadraticBezierTo(
+        headCenter.dx + tailWidth * 0.25,
+        headCenter.dy + headRadius * 1.1,
+        rightAttach.dx,
+        rightAttach.dy,
+      )
       ..close();
-    canvas.drawPath(body, fill);
-    // No stroke and no head circle
 
-    // Base ground ring
-    final Paint ringPaint = Paint()
+    // Combine head + tail by drawing tail then overlay head to keep perfect circle
+    // Shadow for the tail
+    canvas.drawShadow(tail, Colors.black.withValues(alpha: 0.35), 6, true);
+
+    // Gradient fill for head
+    final HSLColor hsl = HSLColor.fromColor(color);
+    final Color light = hsl.withLightness((hsl.lightness + 0.18).clamp(0.0, 1.0)).toColor();
+    final Color dark = hsl.withLightness((hsl.lightness - 0.10).clamp(0.0, 1.0)).toColor();
+    final Paint tailFill = Paint()..color = dark.withValues(alpha: 0.95);
+    final Paint headFill = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [light, dark],
+      ).createShader(Rect.fromCircle(center: headCenter, radius: headRadius));
+
+    // Stroke/border
+    final Paint border = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 3
-      ..color = color.withOpacity(0.95);
-    final double ringR = r * 0.9;
-    final Offset ringCenter = Offset(center.dx, tip.dy + r * 0.2);
-    canvas.drawCircle(ringCenter, ringR, ringPaint);
+      ..strokeWidth = 2.0
+      ..color = Colors.white.withValues(alpha: 0.95);
 
-    // Label background (two lines: title + distance)
-    final double maxLabelWidth = size.width * 0.9;
+    // Draw tail and head
+    canvas.drawPath(tail, tailFill);
+    canvas.drawCircle(headCenter, headRadius, headFill);
+    canvas.drawCircle(headCenter, headRadius, border);
+
+    // Inner white dot for precision
+    canvas.drawCircle(headCenter, headRadius * 0.18, Paint()..color = Colors.white.withValues(alpha: 0.95));
+
+    // Ground ellipse (subtle contact shadow)
+    final double ellipseW = headRadius * 2.0;
+    final double ellipseH = headRadius * 0.55;
+    final Rect ellipseRect = Rect.fromCenter(
+      center: Offset(center.dx, tip.dy + headRadius * 0.18),
+      width: ellipseW,
+      height: ellipseH,
+    );
+    final Paint ground = Paint()..color = Colors.black.withValues(alpha: 0.12);
+    canvas.drawOval(ellipseRect, ground);
+
+    // Label (two-line chip)
+    final double maxLabelWidth = size.width * 0.92;
     final TextPainter titlePainter = TextPainter(
       text: TextSpan(
         text: title,
-        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12),
+        style: const TextStyle(
+          color: Colors.black87,
+          fontWeight: FontWeight.w700,
+          fontSize: 13,
+          letterSpacing: 0.2,
+        ),
       ),
       textDirection: TextDirection.ltr,
       maxLines: 1,
@@ -395,37 +518,55 @@ class _MapPinPainter extends CustomPainter {
     final TextPainter subtitlePainter = TextPainter(
       text: TextSpan(
         text: subtitle,
-        style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.w500, fontSize: 11),
+        style: const TextStyle(
+          color: Colors.black54,
+          fontWeight: FontWeight.w500,
+          fontSize: 11,
+          letterSpacing: 0.1,
+        ),
       ),
       textDirection: TextDirection.ltr,
       maxLines: 1,
+      ellipsis: '…',
     )..layout(maxWidth: maxLabelWidth);
 
-    const double labelPadding = 6.0;
+    const double labelHPad = 10.0;
+    const double labelVPad = 7.0;
     const double lineSpacing = 2.0;
 
     final double contentWidth = math.max(titlePainter.width, subtitlePainter.width);
     final double contentHeight = titlePainter.height + lineSpacing + subtitlePainter.height;
 
-    final RRect rect = RRect.fromRectAndRadius(
+    final RRect chip = RRect.fromRectAndRadius(
       Rect.fromCenter(
-        center: Offset(center.dx, ringCenter.dy + ringR + 14),
-        width: contentWidth + 2 * labelPadding,
-        height: contentHeight + 2 * labelPadding,
+        center: Offset(center.dx, ellipseRect.center.dy + ellipseRect.height / 2 + 16),
+        width: contentWidth + 2 * labelHPad,
+        height: contentHeight + 2 * labelVPad,
       ),
-      const Radius.circular(8),
+      const Radius.circular(12),
     );
 
-    final Paint bg = Paint()..color = Colors.black54;
-    canvas.drawRRect(rect, bg);
-    final double titleLeft = rect.center.dx - (titlePainter.width / 2);
-    final double subtitleLeft = rect.center.dx - (subtitlePainter.width / 2);
-    titlePainter.paint(canvas, Offset(titleLeft, rect.top + labelPadding));
+    // Drop shadow for the chip
+    final Paint chipShadow = Paint()
+      ..color = Colors.black.withValues(alpha: 0.18)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
+    canvas.save();
+    canvas.translate(0, 1);
+    canvas.drawRRect(chip, chipShadow);
+    canvas.restore();
+
+    // Chip background
+    final Paint chipBg = Paint()..color = Colors.white.withValues(alpha: 0.92);
+    canvas.drawRRect(chip, chipBg);
+
+    final double titleLeft = chip.center.dx - (titlePainter.width / 2);
+    final double subtitleLeft = chip.center.dx - (subtitlePainter.width / 2);
+    titlePainter.paint(canvas, Offset(titleLeft, chip.top + labelVPad));
     subtitlePainter.paint(
       canvas,
       Offset(
         subtitleLeft,
-        rect.top + labelPadding + titlePainter.height + lineSpacing,
+        chip.top + labelVPad + titlePainter.height + lineSpacing,
       ),
     );
   }

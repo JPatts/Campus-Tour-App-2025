@@ -1,14 +1,14 @@
 {
     "hotspotId": "psuLibrary",
     "name": "Millar Library",
-    "description": "The Branford Price Millar Library is the main library at Portland State University, serving students and faculty with extensive resources.",
+    "description": "The Branford Price Millar Library is the main library at Portland State University.",
     "location": {
-        "latitude": 45.5118,
-        "longitude": -122.6847,
-        "radius": 60.96 
+        "latitude": 45.51154,
+        "longitude": -122.686242,
+        "radius": 35.10 
     },
-    "createdAt": "2023-10-01T14:30:00Z",
-    "updatedAt": "2023-10-01T14:30:00Z",
+    "createdAt": "2025-08-14T14:30:00Z",
+    "updatedAt": "2025-08-14T14:30:00Z",
 
     "status": "active",
     "features": [

@@ -9,16 +9,22 @@ import 'dart:io' show Platform;
 import 'dart:math' as math;
 import 'models/hotspot.dart';
 import 'services/hotspot_service.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class MapScreen extends StatefulWidget {
   final bool adminModeEnabled;
   const MapScreen({Key? key, this.adminModeEnabled = false}) : super(key: key);
 
+  // Remember the last selected map type across rebuilds/switches
+  static MapType? lastMapType;
+  // Remember the last camera position (center + zoom) across page switches
+  static CameraPosition? lastCameraPosition;
+
   @override
   State<MapScreen> createState() => _MapScreenState();
 }
 
-class _MapScreenState extends State<MapScreen> {
+class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin<MapScreen> {
   GoogleMapController? _mapController;
   Position? _currentPosition;
   bool _isLoading = true;
@@ -29,18 +35,25 @@ class _MapScreenState extends State<MapScreen> {
   final Map<String, bool> _wasInsideHotspot = {}; // Track enter/exit transitions
   final Map<String, DateTime> _lastHotspotNotifyAt = {}; // Debounce notifications
   String? _currentlyShownSnackForHotspotId;
+  MapType _mapType = MapType.normal;
+  CameraPosition? _lastCameraMove;
 
   // Portland State University coordinates
   static const CameraPosition _psuLocation = CameraPosition(
-    target: LatLng(45.5152, -122.6784), // PSU Park Blocks area
-    zoom: 16.0,
+    target: LatLng(45.5115, -122.6835), // PSU campus center
+    zoom: 15.5, // Slightly zoomed out to show more campus context
   );
 
   @override
   void initState() {
     super.initState();
+    // Restore last selected map type if available
+    _mapType = MapScreen.lastMapType ?? MapType.normal;
     _initializeMap();
   }
+
+  @override
+  bool get wantKeepAlive => true;
 
   // No local testing toggle—admin mode controls access globally
 
@@ -126,8 +139,9 @@ class _MapScreenState extends State<MapScreen> {
         _isLoading = false;
       });
 
-      // Move camera to user's location if it's near PSU
-      if (_mapController != null && _isNearPSU(position)) {
+      // Move camera to user's location if it's near PSU, but only
+      // if we don't already have a saved camera position
+      if (_mapController != null && _isNearPSU(position) && MapScreen.lastCameraPosition == null) {
         _mapController!.animateCamera(
           CameraUpdate.newCameraPosition(
             CameraPosition(
@@ -135,6 +149,10 @@ class _MapScreenState extends State<MapScreen> {
               zoom: 17.0,
             ),
           ),
+        );
+        MapScreen.lastCameraPosition = CameraPosition(
+          target: LatLng(position.latitude, position.longitude),
+          zoom: 17.0,
         );
       }
     } catch (e) {
@@ -146,12 +164,12 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   bool _isNearPSU(Position position) {
-    // Check if user is within ~2km of PSU
+    // Check if user is within ~8km of PSU (about 5 miles)
     double distance = Geolocator.distanceBetween(
-      45.5152, -122.6784, // PSU coordinates
+      45.5115, -122.6835, // PSU campus center
       position.latitude, position.longitude,
     );
-    return distance <= 2000; // 2km radius
+    return distance <= 8000; // ~5 miles radius
   }
 
   Set<Marker> _createMarkers() {
@@ -213,6 +231,11 @@ class _MapScreenState extends State<MapScreen> {
                             color: Colors.white,
                           ),
                         ),
+                      ),
+                      IconButton(
+                        tooltip: 'Open in Maps',
+                        onPressed: () => _showOpenInMapsSheet(hotspot),
+                        icon: const Icon(Icons.directions_outlined, color: Colors.white),
                       ),
                       IconButton(
                         onPressed: () => Navigator.of(context).pop(),
@@ -509,14 +532,14 @@ class _MapScreenState extends State<MapScreen> {
               const SizedBox(height: 16),
               if (_currentPosition == null)
                 const Text('Current location unavailable'),
-              if (_currentPosition != null && isWithinRadius) ...[
+               if (_currentPosition != null && isWithinRadius) ...[
                 const Text('You are inside this hotspot zone.'),
                 const SizedBox(height: 8),
                 Text('Zone radius: ${_formatDistance(hotspot.location.radius)}'),
                ] else if (_currentPosition != null && distance != null) ...[
-                Text('Remaining: ${_formatRemainingFeet(distance, 200)}'),
+                Text('Remaining: ${_formatRemainingFeet(distance, hotspot.location.radius * 3.28084)}'),
                 const SizedBox(height: 8),
-                Text('Get within 200 ft to unlock content'),
+                const Text('Enter the zone to unlock the content'),
               ],
             ],
           ),
@@ -524,6 +547,10 @@ class _MapScreenState extends State<MapScreen> {
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
               child: const Text('Close'),
+            ),
+            TextButton(
+              onPressed: () => _showOpenInMapsSheet(hotspot),
+              child: const Text('Open in Maps'),
             ),
             if (_currentPosition != null && isWithinRadius)
               ElevatedButton(
@@ -537,6 +564,70 @@ class _MapScreenState extends State<MapScreen> {
         );
       },
     );
+  }
+
+  void _showOpenInMapsSheet(Hotspot hotspot) {
+    showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.map_outlined),
+                title: const Text('Open in Apple Maps'),
+                onTap: () async {
+                  Navigator.of(context).pop();
+                  await _launchAppleMaps(hotspot);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.map),
+                title: const Text('Open in Google Maps'),
+                onTap: () async {
+                  Navigator.of(context).pop();
+                  await _launchGoogleMaps(hotspot);
+                },
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _launchAppleMaps(Hotspot hotspot) async {
+    final double lat = hotspot.location.latitude;
+    final double lng = hotspot.location.longitude;
+    final String label = hotspot.name;
+    final Uri uri = Uri.https('maps.apple.com', '/', {
+      'q': label,
+      'll': '$lat,$lng',
+    });
+    await _launchUri(uri);
+  }
+
+  Future<void> _launchGoogleMaps(Hotspot hotspot) async {
+    final double lat = hotspot.location.latitude;
+    final double lng = hotspot.location.longitude;
+    final Uri uri = Uri.https('www.google.com', '/maps/search/', {
+      'api': '1',
+      'query': '$lat,$lng',
+    });
+    await _launchUri(uri);
+  }
+
+  Future<void> _launchUri(Uri uri) async {
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      // Fallback to in-app browser if external app not available
+      await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
+    }
   }
 
   IconData _getIconForFeatureType(String type) {
@@ -564,6 +655,10 @@ class _MapScreenState extends State<MapScreen> {
   String _formatRemainingFeet(double meters, double thresholdFeet) {
     final double feet = meters * 3.28084;
     final double remaining = (feet - thresholdFeet).clamp(0, double.infinity);
+    if (remaining >= 5280) {
+      final double miles = remaining / 5280.0;
+      return '${miles.toStringAsFixed(1)} miles left';
+    }
     return '${remaining.toStringAsFixed(0)} ft left';
   }
 
@@ -812,8 +907,9 @@ class _MapScreenState extends State<MapScreen> {
       );
     }
 
+    super.build(context);
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.dark.copyWith(statusBarColor: Colors.white),
+      value: SystemUiOverlayStyle.light.copyWith(statusBarColor: const Color(0xFF6D8D24)),
       child: Scaffold(
         body: Stack(
           children: [
@@ -822,8 +918,8 @@ class _MapScreenState extends State<MapScreen> {
                 debugPrint('Google Map created successfully');
                 _mapController = controller;
               },
-              initialCameraPosition: _psuLocation,
-              mapType: MapType.hybrid,
+              initialCameraPosition: MapScreen.lastCameraPosition ?? _psuLocation,
+              mapType: _mapType,
               markers: _createMarkers(),
               polygons: _createPolygons(),
               circles: _createCircles(),
@@ -836,15 +932,67 @@ class _MapScreenState extends State<MapScreen> {
                 debugPrint('Tapped at: ${location.latitude}, ${location.longitude}');
                 _handleMapTap(location);
               },
+              onCameraMove: (CameraPosition position) {
+                _lastCameraMove = position;
+              },
+              onCameraIdle: () {
+                if (_lastCameraMove != null) {
+                  MapScreen.lastCameraPosition = _lastCameraMove;
+                }
+              },
             ),
-            // White status bar background to ensure battery/time visibility on notched devices
+            // Map type toggle button (Standard / Satellite / Hybrid / Terrain)
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 12,
+              left: 12,
+              child: Material(
+                color: Colors.white,
+                elevation: 2,
+                borderRadius: BorderRadius.circular(10),
+                child: PopupMenuButton<MapType>(
+                  onSelected: (t) => setState(() {
+                    _mapType = t;
+                    MapScreen.lastMapType = t;
+                  }),
+                  itemBuilder: (ctx) => const [
+                    PopupMenuItem(value: MapType.normal, child: Text('Standard')),
+                    PopupMenuItem(value: MapType.satellite, child: Text('Satellite')),
+                    PopupMenuItem(value: MapType.hybrid, child: Text('Hybrid')),
+                    PopupMenuItem(value: MapType.terrain, child: Text('Terrain')),
+                  ],
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.layers, size: 18, color: Colors.black87),
+                        const SizedBox(width: 6),
+                        Text(
+                          _mapType == MapType.normal
+                              ? 'Standard'
+                              : _mapType == MapType.satellite
+                                  ? 'Satellite'
+                                  : _mapType == MapType.hybrid
+                                      ? 'Hybrid'
+                                      : 'Terrain',
+                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(width: 2),
+                        const Icon(Icons.arrow_drop_down, size: 18),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            // Status bar background to match brand color
             Positioned(
               top: 0,
               left: 0,
               right: 0,
               child: Container(
                 height: MediaQuery.of(context).padding.top,
-                color: Colors.white,
+                color: const Color(0xFF6D8D24),
               ),
             ),
           ],

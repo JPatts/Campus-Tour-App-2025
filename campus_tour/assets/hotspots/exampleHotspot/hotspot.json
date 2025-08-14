@@ -1,27 +1,27 @@
 {
     "hotspotId": "exampleHotspot",
-    "name": "PSU Park Blocks",
-    "description": "Welcome to Portland State University! This is the heart of our campus.",
+    "name": "Parking One",
+    "description": "Parking Structure One offers convenient parking for PSU students, faculty, and visitors.",
     "location": {
-        "latitude": 45.5152,
-        "longitude": -122.6784,
-        "radius": 60.96 
+        "latitude": 45.510866,
+        "longitude": -122.683645,
+        "radius": 33.10 
     },
-    "createdAt": "2023-10-01T12:00:00Z",
-    "updatedAt": "2023-10-01T12:00:00Z",
+    "createdAt": "2025-08-14T12:00:00Z",
+    "updatedAt": "2025-08-14T12:00:00Z",
 
     "status": "active",
     "features": [
         {
             "featureId": "1",
             "type": "photo",
-            "content": "Historic view of the PSU Park Blocks area.",
+            "content": "View of Parking Structure One entrance and payment stations.",
             "fileLocation": "photoOfBali.jpg"
         },
         {
             "featureId": "2",
             "type": "video",
-            "content": "Virtual tour of the Park Blocks",
+            "content": "Guide to parking rates, hours, and payment options",
             "fileLocation": "videoOfBali.mov"
         }
     ]

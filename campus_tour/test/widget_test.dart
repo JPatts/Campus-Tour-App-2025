@@ -5,26 +5,31 @@
 // gestures. You can also use WidgetTester to find child widgets in the widget
 // tree, read text, and verify that the values of widget properties are correct.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:campus_tour/main.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
+  testWidgets('App loads with Home page and bottom navigation', (WidgetTester tester) async {
     await tester.pumpWidget(const MyApp());
-
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
-
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
     await tester.pump();
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // Home (center) page should show the AppBar title
+    expect(find.text('Campus Tour App'), findsOneWidget);
+
+    // BottomNavigationBar labels
+    expect(find.text('Map'), findsOneWidget);
+    expect(find.text('Home'), findsOneWidget);
+    expect(find.text('Camera'), findsOneWidget);
+
+    // Tapping Map should navigate to map page (no AppBar on non-center pages)
+    await tester.tap(find.text('Map'));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.text('Campus Tour App'), findsNothing);
+
+    // Return to Home
+    await tester.tap(find.text('Home'));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.text('Campus Tour App'), findsOneWidget);
   });
 }

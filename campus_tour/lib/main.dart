@@ -34,7 +34,20 @@ class MyApp extends StatelessWidget {
       title: 'Campus Tour App',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF6D8D24)),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFF6D8D24),
+          foregroundColor: Colors.white,
+          elevation: 0,
+        ),
+        bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+          backgroundColor: Colors.transparent,
+          selectedItemColor: Colors.white,
+          unselectedItemColor: Colors.white70,
+          elevation: 0,
+          type: BottomNavigationBarType.fixed,
+          selectedLabelStyle: TextStyle(fontWeight: FontWeight.w600),
+        ),
       ),
       // The widget below owns the PageView + bottom arrows
       home: const HomeWithNav(),
@@ -144,8 +157,31 @@ class _HomeWithNavState extends State<HomeWithNav> {
       // Banner appears ONLY on the center page (index 1)
       appBar: _currentPage == 1
           ? AppBar(
-              title: const Text('Campus Tour App'),
-              backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+              centerTitle: true,
+              toolbarHeight: 70,
+              title: const Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Campus Tour App',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    'Locations',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white70,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                ],
+              ),
             )
           : null,
 
@@ -159,7 +195,12 @@ class _HomeWithNavState extends State<HomeWithNav> {
       ),
 
       // Bottom navigation bar with 3 icons
-      bottomNavigationBar: BottomNavigationBar(
+      bottomNavigationBar: ColoredBox(
+        color: const Color(0xFF6D8D24),
+        child: SafeArea(
+          top: false,
+          child: BottomNavigationBar(
+            backgroundColor: Colors.transparent,
         currentIndex: _currentPage,
         onTap: (index) {
           final DateTime now = DateTime.now();
@@ -216,6 +257,8 @@ class _HomeWithNavState extends State<HomeWithNav> {
             label: 'Camera',
           ),
         ],
+          ),
+        ),
       ),
     );
   }
