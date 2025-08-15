@@ -34,9 +34,9 @@ class MyApp extends StatelessWidget {
       title: 'Campus Tour App',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF6D8D24)),
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF213921)),
         appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF6D8D24),
+          backgroundColor: Color(0xFF213921),
           foregroundColor: Colors.white,
           elevation: 0,
         ),
@@ -196,7 +196,7 @@ class _HomeWithNavState extends State<HomeWithNav> {
 
       // Bottom navigation bar with 3 icons
       bottomNavigationBar: ColoredBox(
-        color: const Color(0xFF6D8D24),
+        color: const Color(0xFF213921),
         child: SafeArea(
           top: false,
           child: BottomNavigationBar(

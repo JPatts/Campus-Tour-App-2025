@@ -909,7 +909,7 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
 
     super.build(context);
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light.copyWith(statusBarColor: const Color(0xFF6D8D24)),
+      value: SystemUiOverlayStyle.light.copyWith(statusBarColor: const Color(0xFF213921)),
       child: Scaffold(
         body: Stack(
           children: [
@@ -992,7 +992,7 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
               right: 0,
               child: Container(
                 height: MediaQuery.of(context).padding.top,
-                color: const Color(0xFF6D8D24),
+                color: const Color(0xFF213921),
               ),
             ),
           ],
