@@ -17,14 +17,16 @@
             "type": "photo",
             "content": "Photo of a car",
             "fileLocation": "photoOfBali.jpg",
-            "postedDate": "Aug 10, 2025"
+            "postedDate": "Aug 10, 2025",
+            "author": "Campus Tour Team"
         },
         {
             "featureId": "2",
             "type": "video",
             "content": "Video of a cat",
             "fileLocation": "videoOfBali.mov",
-            "postedDate": "Aug 10, 2025"
+            "postedDate": "Aug 10, 2025",
+            "author": "Campus Tour Team"
         }
     ]
 }

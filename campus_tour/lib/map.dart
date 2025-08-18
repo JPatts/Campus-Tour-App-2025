@@ -420,33 +420,49 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        feature.content,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      if (feature.postedDate != null) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          feature.postedDate!,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      ],
-                    ],
+                  child: Text(
+                    feature.content,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 12),
             _buildMediaContent(hotspot, feature),
+            if (feature.postedDate != null || feature.author != null) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  if (feature.postedDate != null)
+                    Text(
+                      feature.postedDate!,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  if (feature.postedDate != null && feature.author != null)
+                    Text(
+                      ' • ',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  if (feature.author != null)
+                    Text(
+                      feature.author!,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                ],
+              ),
+            ],
           ],
         ),
       ),
