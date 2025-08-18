@@ -14,33 +14,10 @@
     "features": [
         {
             "featureId": "1",
-            "type": "photo",
-            "content": "Historic exterior view of Millar Library.",
-            "fileLocation": "library_exterior.jpg"
-        },
-        {
-            "featureId": "2",
-            "type": "photo",
-            "content": "Another view of the library exterior.",
-            "fileLocation": "library_exterior copy.jpg"
-        },
-        {
-            "featureId": "3",
-            "type": "photo",
-            "content": "Third perspective of Millar Library.",
-            "fileLocation": "library_exterior copy 2.jpg"
-        },
-        {
-            "featureId": "4",
             "type": "video",
-            "content": "Virtual walkthrough of the library interior and study spaces.",
-            "fileLocation": "library_tour.mov"
-        },
-        {
-            "featureId": "5",
-            "type": "audio",
-            "content": "History of the Millar Library and its role in PSU's academic mission.",
-            "fileLocation": "library_history.mp3"
+            "content": "Beyond the Books :: What's new at the Portland State Library",
+            "fileLocation": "PSU_Library_Media1.mov",
+            "postedDate": "May 17, 2013"
         }
     ]
 } 

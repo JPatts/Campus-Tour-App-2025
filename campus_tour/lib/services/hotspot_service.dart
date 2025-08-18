@@ -41,7 +41,7 @@ class HotspotService {
     final List<String> hotspotDirectories = [
       'parkingStructureOne',
       'psuLibrary',
-      'psuRecCenter',
+      'psuScottCenter',
       'se117thAve',
       'testHotspotSmall',
       'testHotspotBig',

@@ -1,6 +1,6 @@
 {
-    "hotspotId": "psuRecCenter",
-    "name": "Stott Center",
+    "hotspotId": "psuScottCenter",
+    "name": "PSU Scott Center",
     "description": "The Peter W. Stott Center is PSU's premier recreation and fitness facility.",
     "location": {
         "latitude": 45.5109662,
@@ -14,15 +14,10 @@
     "features": [
         {
             "featureId": "1",
-            "type": "photo",
-            "content": "Modern fitness facilities and equipment available to students.",
-            "fileLocation": "rec_center_gym.jpg"
-        },
-        {
-            "featureId": "2",
             "type": "video",
-            "content": "Tour of the rock climbing wall and recreational activities.",
-            "fileLocation": "rec_center_activities.mov"
+            "content": "Video Tour - Viking Pavilion at the Peter W. Stott Center",
+            "fileLocation": "scott_center_tour.mov",
+            "postedDate": "Aug 23, 2018"
         }
     ]
 } 

@@ -81,12 +81,14 @@ class HotspotFeature {
   final String type;
   final String content;
   final String fileLocation;
+  final String? postedDate;
 
   HotspotFeature({
     required this.featureId,
     required this.type,
     required this.content,
     required this.fileLocation,
+    this.postedDate,
   });
 
   factory HotspotFeature.fromJson(Map<String, dynamic> json) {
@@ -95,6 +97,7 @@ class HotspotFeature {
       type: json['type'] ?? '',
       content: json['content'] ?? '',
       fileLocation: json['fileLocation'] ?? '',
+      postedDate: json['postedDate'],
     );
   }
 
@@ -104,6 +107,7 @@ class HotspotFeature {
       'type': type,
       'content': content,
       'fileLocation': fileLocation,
+      if (postedDate != null) 'postedDate': postedDate,
     };
   }
 } 

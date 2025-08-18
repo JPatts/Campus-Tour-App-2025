@@ -420,12 +420,27 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text(
-                    feature.content,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        feature.content,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      if (feature.postedDate != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          feature.postedDate!,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
               ],
@@ -724,9 +739,9 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
                 const SizedBox(height: 8),
                 Text('Zone radius: ${_formatDistance(hotspot.location.radius)}'),
                ] else if (_currentPosition != null && distance != null) ...[
-                Text('Remaining: ${_formatRemainingFeet(distance, hotspot.location.radius * 3.28084)}'),
-                const SizedBox(height: 8),
                 const Text('Enter the zone to unlock the content'),
+                const SizedBox(height: 8),
+                Text('Remaining: ${_formatRemainingFeet(distance, hotspot.location.radius * 3.28084)}'),
               ],
             ],
           ),

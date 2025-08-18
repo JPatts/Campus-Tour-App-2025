@@ -15,14 +15,16 @@
         {
             "featureId": "1",
             "type": "photo",
-            "content": "View of Parking Structure One entrance and payment stations.",
-            "fileLocation": "photoOfBali.jpg"
+            "content": "Photo of a car",
+            "fileLocation": "photoOfBali.jpg",
+            "postedDate": "Aug 10, 2025"
         },
         {
             "featureId": "2",
             "type": "video",
-            "content": "Guide to parking rates, hours, and payment options",
-            "fileLocation": "videoOfBali.mov"
+            "content": "Video of a cat",
+            "fileLocation": "videoOfBali.mov",
+            "postedDate": "Aug 10, 2025"
         }
     ]
 }
