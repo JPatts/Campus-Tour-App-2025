@@ -179,6 +179,84 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
     zoom: 15.5, // Slightly zoomed out to show more campus context
   );
 
+  // PSU Campus boundaries to restrict map view
+  static final LatLngBounds _psuBounds = LatLngBounds(
+    southwest: const LatLng(45.5080, -122.6950), // Southwest corner of PSU campus (moved west)
+    northeast: const LatLng(45.5150, -122.6800), // Northeast corner of PSU campus (moved west)
+  );
+
+  // Custom map style for better campus visualization
+  static const String _customMapStyle = '''
+  [
+    {
+      "featureType": "poi.business",
+      "elementType": "labels",
+      "stylers": [
+        {
+          "visibility": "off"
+        }
+      ]
+    },
+    {
+      "featureType": "poi",
+      "elementType": "labels",
+      "stylers": [
+        {
+          "visibility": "off"
+        }
+      ]
+    },
+    {
+      "featureType": "transit",
+      "elementType": "labels",
+      "stylers": [
+        {
+          "visibility": "off"
+        }
+      ]
+    },
+    {
+      "featureType": "poi.school",
+      "elementType": "geometry",
+      "stylers": [
+        {
+          "color": "#e8f5e8"
+        }
+      ]
+    },
+    {
+      "featureType": "poi.school",
+      "elementType": "labels.text",
+      "stylers": [
+        {
+          "color": "#2e7d32"
+        },
+        {
+          "fontWeight": "bold"
+        }
+      ]
+    },
+    {
+      "featureType": "landscape",
+      "elementType": "geometry",
+      "stylers": [
+        {
+          "color": "#f5f5f5"
+        }
+      ]
+    },
+    {
+      "featureType": "road",
+      "elementType": "geometry",
+      "stylers": [
+        {
+          "color": "#ffffff"
+        }
+      ]
+    }
+  ]
+  ''';
+
   @override
   void initState() {
     super.initState();
@@ -309,7 +387,7 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
 
   Set<Marker> _createMarkers() {
     // Remove custom user marker to avoid confusion with built-in blue dot
-    // Hotspots are displayed as circles only
+    // Hotspots are displayed as circles only for a cleaner look
     return <Marker>{};
   }
 
@@ -936,14 +1014,39 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
           );
         }
 
+        // Add shadow circle for 3D effect (smaller border)
+        circles.add(
+          Circle(
+            circleId: CircleId('${hotspot.hotspotId}_shadow'),
+            center: LatLng(hotspot.location.latitude, hotspot.location.longitude),
+            radius: hotspot.location.radius + 1, // Smaller shadow border
+            strokeColor: Colors.transparent,
+            strokeWidth: 0,
+            fillColor: Colors.black.withValues(alpha: 0.02), // Extremely transparent shadow
+          ),
+        );
+        
+        // Main 3D circle with elevation
         circles.add(
           Circle(
             circleId: CircleId('${hotspot.hotspotId}_radius'),
             center: LatLng(hotspot.location.latitude, hotspot.location.longitude),
             radius: hotspot.location.radius,
-            strokeColor: isWithinRadius ? Colors.green : Colors.orange,
-            strokeWidth: 2,
-            fillColor: (isWithinRadius ? Colors.green : Colors.orange).withValues(alpha: 0.1),
+            strokeColor: Colors.transparent,
+            strokeWidth: 0,
+            fillColor: _getHotspotColor(isWithinRadius),
+          ),
+        );
+        
+        // Add highlight circle for 3D effect (smaller border)
+        circles.add(
+          Circle(
+            circleId: CircleId('${hotspot.hotspotId}_highlight'),
+            center: LatLng(hotspot.location.latitude, hotspot.location.longitude),
+            radius: hotspot.location.radius * 0.95, // Smaller highlight border
+            strokeColor: Colors.transparent,
+            strokeWidth: 0,
+            fillColor: _getHotspotColor(isWithinRadius).withValues(alpha: 0.25), // Extremely transparent highlight
           ),
         );
       }
@@ -1135,6 +1238,10 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
               onMapCreated: (GoogleMapController controller) {
                 debugPrint('Google Map created successfully');
                 _mapController = controller;
+                // Apply custom map style for better campus visualization
+                controller.setMapStyle(_customMapStyle);
+                // Restrict camera to PSU campus bounds
+                controller.moveCamera(CameraUpdate.newLatLngBounds(_psuBounds, 50));
               },
               initialCameraPosition: MapScreen.lastCameraPosition ?? _psuLocation,
               mapType: _mapType,
@@ -1142,20 +1249,25 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
               polygons: _createPolygons(),
               circles: _createCircles(),
               myLocationEnabled: true,
-              myLocationButtonEnabled: true,
+              myLocationButtonEnabled: _currentPosition != null,
               compassEnabled: true,
               mapToolbarEnabled: true,
               zoomControlsEnabled: true,
+              // cameraTargetBounds: CameraTargetBounds.bounded(_psuBounds), // Not available in current version
+              minMaxZoomPreference: MinMaxZoomPreference(14.0, 18.0),
               onTap: (LatLng location) {
                 debugPrint('Tapped at: ${location.latitude}, ${location.longitude}');
                 _handleMapTap(location);
               },
               onCameraMove: (CameraPosition position) {
                 _lastCameraMove = position;
+                // Only check bounds when camera movement stops to avoid jarring experience
               },
               onCameraIdle: () {
                 if (_lastCameraMove != null) {
                   MapScreen.lastCameraPosition = _lastCameraMove;
+                  // Check bounds only when camera movement stops for smoother experience
+                  _checkAndCorrectCameraBounds(_lastCameraMove!);
                 }
               },
             ),
@@ -1221,10 +1333,63 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
     );
   }
 
+  Color _getHotspotColor(bool isWithinRadius) {
+    // Use extremely subtle, natural colors for satellite/hybrid modes
+    if (_mapType == MapType.satellite || _mapType == MapType.hybrid) {
+      return isWithinRadius 
+        ? Colors.green.withValues(alpha: 0.08)  // Extremely transparent green for satellite
+        : Colors.amber.withValues(alpha: 0.08);  // Extremely transparent amber for satellite
+    } else {
+      // Standard colors for normal/terrain modes
+      return isWithinRadius 
+        ? Colors.green.withValues(alpha: 0.06)  // Extremely transparent green
+        : Colors.orange.withValues(alpha: 0.06); // Extremely transparent orange
+    }
+  }
+
+  Timer? _boundaryTimer;
+  
+  void _checkAndCorrectCameraBounds(CameraPosition position) {
+    if (_mapController == null) return;
+    
+    final target = position.target;
+    final southwest = _psuBounds.southwest;
+    final northeast = _psuBounds.northeast;
+    
+    // Check if camera target is outside PSU bounds
+    if (target.latitude < southwest.latitude || 
+        target.latitude > northeast.latitude ||
+        target.longitude < southwest.longitude || 
+        target.longitude > northeast.longitude) {
+      
+      // Cancel any existing timer
+      _boundaryTimer?.cancel();
+      
+      // Start a 5-second timer to move back to bounds
+      _boundaryTimer = Timer(const Duration(seconds: 5), () {
+        if (_mapController != null) {
+          // Calculate the corrected position within bounds
+          final correctedLat = target.latitude.clamp(southwest.latitude, northeast.latitude);
+          final correctedLng = target.longitude.clamp(southwest.longitude, northeast.longitude);
+          
+          // Use a smooth animation with default duration
+          _mapController!.animateCamera(
+            CameraUpdate.newLatLng(LatLng(correctedLat, correctedLng)),
+          );
+        }
+      });
+    } else {
+      // If camera is within bounds, cancel any pending timer
+      _boundaryTimer?.cancel();
+      
+    }
+  }
+
   @override
   void dispose() {
     _mapController?.dispose();
     _positionSubscription?.cancel();
+    _boundaryTimer?.cancel();
     super.dispose();
   }
 }

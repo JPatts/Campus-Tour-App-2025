@@ -42,7 +42,6 @@ class HotspotService {
       'parkingStructureOne',
       'psuLibrary',
       'psuScottCenter',
-      'se117thAve',
       'testHotspotSmall',
       'testHotspotBig',
     ];
