@@ -39,10 +39,12 @@ class HotspotService {
     
     // List of hotspot directories to load
     final List<String> hotspotDirectories = [
-      'exampleHotspot',
+      'parkingStructureOne',
       'psuLibrary',
       'psuRecCenter',
       'se117thAve',
+      'testHotspotSmall',
+      'testHotspotBig',
     ];
     
     for (final directory in hotspotDirectories) {

@@ -1,6 +1,6 @@
 {
-    "hotspotId": "exampleHotspot",
-    "name": "Parking One",
+    "hotspotId": "parkingStructureOne",
+    "name": "Parking Structure 1",
     "description": "Parking Structure One offers convenient parking for PSU students, faculty, and visitors.",
     "location": {
         "latitude": 45.510866,

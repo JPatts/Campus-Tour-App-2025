@@ -13,6 +13,11 @@ final myService = HotspotService();
 void main() {
   runZonedGuarded(() {
     WidgetsFlutterBinding.ensureInitialized();
+    // Lock the app to portrait orientation only
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
     debugPrint('App starting...');
     runApp(const MyApp());
     myService.loadHotspots();

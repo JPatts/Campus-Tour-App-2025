@@ -53,12 +53,19 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     final CameraController? cam = _cameraController;
-    if (cam == null || !cam.value.isInitialized) return;
-
-    if (state == AppLifecycleState.inactive) {
-      cam.dispose();
+    
+    if (state == AppLifecycleState.inactive || state == AppLifecycleState.paused) {
+      // Dispose camera when app goes to background
+      if (cam != null && cam.value.isInitialized) {
+        cam.dispose();
+        _cameraController = null;
+        _cameraInitFuture = null;
+      }
     } else if (state == AppLifecycleState.resumed) {
-      _setupCamera();
+      // Reinitialize camera when app comes back to foreground
+      if (cam == null || !cam.value.isInitialized) {
+        _setupCamera();
+      }
     }
   }
 
@@ -194,14 +201,19 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
         fit: StackFit.expand,
         children: [
         // Camera preview
-        if (_cameraController != null)
+        if (_cameraController != null && _cameraController!.value.isInitialized)
           FutureBuilder<void>(
             future: _cameraInitFuture,
             builder: (context, snapshot) {
               if (snapshot.connectionState != ConnectionState.done) {
                 return const ColoredBox(color: Colors.black);
               }
-              return CameraPreview(_cameraController!);
+              // Check if controller is still valid before building preview
+              if (_cameraController != null && _cameraController!.value.isInitialized) {
+                return CameraPreview(_cameraController!);
+              } else {
+                return const ColoredBox(color: Colors.black);
+              }
             },
           )
         else
@@ -227,6 +239,9 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
               if (position == null) return const SizedBox.shrink();
 
               final widgets = <Widget>[];
+              bool hasVisibleHotspots = false;
+              bool hasNearbyHotspots = false;
+              
               for (final hs in _hotspots) {
                 final double distanceM = _hotspotService.calculateDistance(
                   position.latitude,
@@ -236,6 +251,8 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                 );
                 // Only render if within some max range (e.g., 500m)
                 if (distanceM > 800) continue;
+                
+                hasNearbyHotspots = true;
                 final targetBearing = _bearingTo(hs);
                 final screenPos = _projectHotspotToScreen(size, targetBearing);
 
@@ -249,6 +266,10 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                 final double scale = (1.0 - (distanceM / 800)).clamp(0.25, 1.0);
                 final double diameter = baseSize * scale;
                 final double markerHeight = diameter * 1.7; // extra space for ring + label
+
+                if (visibility > 0.1) { // Only count as visible if opacity is significant
+                  hasVisibleHotspots = true;
+                }
 
                 widgets.add(
                   Positioned(
@@ -278,6 +299,225 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                     ),
                   ),
                 );
+              }
+              
+              // Show helpful messages when no hotspots are visible
+              if (!hasVisibleHotspots) {
+                if (!hasNearbyHotspots) {
+                  // No nearby hotspots at all
+                  widgets.add(
+                    Positioned(
+                      top: size.height * 0.35,
+                      left: 0,
+                      right: 0,
+                      child: Center(
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 32),
+                          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                Colors.black.withValues(alpha: 0.9),
+                                Colors.black.withValues(alpha: 0.85),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              width: 1,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.3),
+                                blurRadius: 20,
+                                offset: const Offset(0, 10),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // Animated icon container
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: Colors.red.withValues(alpha: 0.2),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Colors.red.withValues(alpha: 0.4),
+                                    width: 2,
+                                  ),
+                                ),
+                                child: Icon(
+                                  Icons.location_off_rounded,
+                                  color: Colors.red.shade300,
+                                  size: 40,
+                                ),
+                              ),
+                              const SizedBox(height: 20),
+                              Text(
+                                'No nearby hotspots',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                'Move to a different location\nto find AR hotspots',
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.8),
+                                  fontSize: 15,
+                                  height: 1.4,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 16),
+                              // Directional arrow hint
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.directions_walk,
+                                      color: Colors.white.withValues(alpha: 0.7),
+                                      size: 16,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'Try walking around',
+                                      style: TextStyle(
+                                        color: Colors.white.withValues(alpha: 0.7),
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                } else {
+                  // Has nearby hotspots but not in view - need to turn phone
+                  widgets.add(
+                    Positioned(
+                      top: size.height * 0.35,
+                      left: 0,
+                      right: 0,
+                      child: Center(
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 32),
+                          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                Colors.black.withValues(alpha: 0.9),
+                                Colors.black.withValues(alpha: 0.85),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              width: 1,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.3),
+                                blurRadius: 20,
+                                offset: const Offset(0, 10),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // Animated icon container
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange.withValues(alpha: 0.2),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Colors.orange.withValues(alpha: 0.4),
+                                    width: 2,
+                                  ),
+                                ),
+                                child: Icon(
+                                  Icons.rotate_right_rounded,
+                                  color: Colors.orange.shade300,
+                                  size: 40,
+                                ),
+                              ),
+                              const SizedBox(height: 20),
+                              Text(
+                                'Turn your phone',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                'Point your camera in different\ndirections to find hotspots',
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.8),
+                                  fontSize: 15,
+                                  height: 1.4,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 16),
+                              // Directional arrows hint
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.swap_horiz,
+                                      color: Colors.white.withValues(alpha: 0.7),
+                                      size: 16,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'Sweep left and right',
+                                      style: TextStyle(
+                                        color: Colors.white.withValues(alpha: 0.7),
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                }
               }
 
               // Heading HUD
