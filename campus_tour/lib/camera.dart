@@ -250,8 +250,8 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                   hs.location.latitude,
                   hs.location.longitude,
                 );
-                // Only render if within some max range (e.g., 500m)
-                if (distanceM > 800) continue;
+                // Only render if within 1000 feet (305 meters)
+                if (distanceM > 305) continue;
                 
                 hasNearbyHotspots = true;
 
@@ -269,7 +269,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
 
                 // Marker footprint and size
                 final double baseSize = 140;
-                final double scale = (1.0 - (distanceM / 800)).clamp(0.25, 1.0);
+                final double scale = (1.0 - (distanceM / 305)).clamp(0.25, 1.0);
                 final double diameter = baseSize * scale;
                 final double markerHeight = diameter * 1.7; // extra space for ring + label
 
@@ -310,80 +310,94 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
               // Show helpful messages when no hotspots are visible
               if (!hasVisibleHotspots) {
                 if (!hasNearbyHotspots) {
-                  // No nearby hotspots at all
+                  // No nearby hotspots - AR-style indicator
                   widgets.add(
                     Positioned(
-                      top: size.height * 0.35,
+                      top: size.height * 0.4,
                       left: 0,
                       right: 0,
                       child: Center(
-                        child: Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 32),
-                          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                Colors.black.withValues(alpha: 0.9),
-                                Colors.black.withValues(alpha: 0.85),
-                              ],
-                            ),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.2),
-                              width: 1,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.3),
-                                blurRadius: 20,
-                                offset: const Offset(0, 10),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              // Animated icon container
-                              Container(
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: Colors.red.withValues(alpha: 0.2),
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Floating AR-style location indicator
+                            Container(
+                              width: 80,
+                              height: 80,
+                              decoration: BoxDecoration(
+                                gradient: RadialGradient(
+                                  colors: [
+                                    Colors.red.withValues(alpha: 0.8),
+                                    Colors.red.withValues(alpha: 0.3),
+                                    Colors.red.withValues(alpha: 0.1),
+                                  ],
+                                ),
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
                                     color: Colors.red.withValues(alpha: 0.4),
-                                    width: 2,
+                                    blurRadius: 20,
+                                    spreadRadius: 5,
                                   ),
-                                ),
-                                child: Icon(
-                                  Icons.location_off_rounded,
-                                  color: Colors.red.shade300,
-                                  size: 40,
-                                ),
+                                ],
                               ),
-                              const SizedBox(height: 20),
-                              Text(
+                              child: Icon(
+                                Icons.location_off_rounded,
+                                color: Colors.white,
+                                size: 50,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                                                          // Floating text with AR-style glow
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.6),
+                                  borderRadius: BorderRadius.circular(25),
+                                  border: Border.all(
+                                    color: Colors.green.withValues(alpha: 0.6),
+                                    width: 1,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.green.withValues(alpha: 0.3),
+                                      blurRadius: 10,
+                                      spreadRadius: 2,
+                                    ),
+                                  ],
+                                ),
+                              child: Text(
                                 'No locations nearby',
                                 style: TextStyle(
                                   color: Colors.white,
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w700,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
                                   letterSpacing: 0.5,
                                 ),
                               ),
-                              const SizedBox(height: 12),
-                              Text(
+                            ),
+                            const SizedBox(height: 12),
+                            // Suggestion text with AR-style design
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.4),
+                                borderRadius: BorderRadius.circular(15),
+                                border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.3),
+                                  width: 0.5,
+                                ),
+                              ),
+                              child: Text(
                                 'Walk around campus to discover AR hotspots',
                                 style: TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 16,
-                                  height: 1.4,
+                                  color: Colors.white.withValues(alpha: 0.9),
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
                                 ),
-                                textAlign: TextAlign.center,
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -433,79 +447,94 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                       directionText = 'Turn around';
                     }
                     
+                    // AR-style directional indicator
                     widgets.add(
                       Positioned(
-                        top: size.height * 0.35,
+                        top: size.height * 0.4,
                         left: 0,
                         right: 0,
                         child: Center(
-                          child: Container(
-                            margin: const EdgeInsets.symmetric(horizontal: 32),
-                            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [
-                                  Colors.black.withValues(alpha: 0.9),
-                                  Colors.black.withValues(alpha: 0.85),
-                                ],
-                              ),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.2),
-                                width: 1,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.3),
-                                  blurRadius: 20,
-                                  offset: const Offset(0, 10),
-                                ),
-                              ],
-                            ),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                // Animated arrow container
-                                Container(
-                                  padding: const EdgeInsets.all(16),
-                                  decoration: BoxDecoration(
-                                    color: Colors.orange.withValues(alpha: 0.2),
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: Colors.orange.withValues(alpha: 0.4),
-                                      width: 2,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // Floating AR-style arrow indicator
+                              Container(
+                                width: 80,
+                                height: 80,
+                                decoration: BoxDecoration(
+                                  gradient: RadialGradient(
+                                    colors: [
+                                      Colors.green.withValues(alpha: 0.8),
+                                      Colors.green.withValues(alpha: 0.3),
+                                      Colors.green.withValues(alpha: 0.1),
+                                    ],
+                                  ),
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.green.withValues(alpha: 0.4),
+                                      blurRadius: 20,
+                                      spreadRadius: 5,
                                     ),
-                                  ),
-                                  child: Icon(
-                                    arrowIcon,
-                                    color: Colors.orange.shade300,
-                                    size: 40,
-                                  ),
+                                  ],
                                 ),
-                                const SizedBox(height: 20),
-                                Text(
+                                child: Icon(
+                                  arrowIcon,
+                                  color: Colors.white,
+                                  size: 50,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              // Floating text with AR-style glow
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.6),
+                                  borderRadius: BorderRadius.circular(25),
+                                  border: Border.all(
+                                    color: Colors.green.withValues(alpha: 0.6),
+                                    width: 1,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.green.withValues(alpha: 0.3),
+                                      blurRadius: 10,
+                                      spreadRadius: 2,
+                                    ),
+                                  ],
+                                ),
+                                child: Text(
                                   directionText,
                                   style: TextStyle(
                                     color: Colors.white,
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.w700,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
                                     letterSpacing: 0.5,
                                   ),
                                 ),
-                                const SizedBox(height: 12),
-                                Text(
-                                  '${nearestHotspot.name} is ${(nearestDistance * 3.28084).toStringAsFixed(0)} ft away',
-                                  style: TextStyle(
-                                    color: Colors.white70,
-                                    fontSize: 16,
-                                    height: 1.4,
+                              ),
+                              const SizedBox(height: 12),
+                              // Distance indicator with AR-style design
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.4),
+                                  borderRadius: BorderRadius.circular(15),
+                                  border: Border.all(
+                                    color: Colors.white.withValues(alpha: 0.3),
+                                    width: 0.5,
                                   ),
-                                  textAlign: TextAlign.center,
                                 ),
-                              ],
-                            ),
+                                child: Text(
+                                  '${nearestHotspot.name} • ${(nearestDistance * 3.28084).toStringAsFixed(0)} ft',
+                                  style: TextStyle(
+                                    color: Colors.white.withValues(alpha: 0.9),
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
@@ -881,92 +910,99 @@ class _MapPinPainter extends CustomPainter {
   final Color color;
   final String title;
   final String subtitle;
-  _MapPinPainter({required this.color, required this.title, required this.subtitle});
+  final String? customEmoji;
+  _MapPinPainter({required this.color, required this.title, required this.subtitle, this.customEmoji});
+
+  // Get default emoji for hotspot type
+  String _getDefaultEmoji() {
+    final lowerTitle = title.toLowerCase();
+    if (lowerTitle.contains('library')) return '📚';
+    if (lowerTitle.contains('parking')) return '🅿️';
+    if (lowerTitle.contains('center') || lowerTitle.contains('scott')) return '🏟️';
+    if (lowerTitle.contains('test')) return '📚';
+    return '📍'; // default emoji
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
     final double base = math.min(size.width, size.height);
-    final double headRadius = base * 0.26;
+    final double markerSize = base * 0.3;
 
-    // Compute pin geometry
-    final Offset headCenter = Offset(center.dx, center.dy - headRadius * 0.2);
-    final Offset tip = Offset(center.dx, center.dy + headRadius * 2.15);
+    // AR-style floating marker with content icon
+    final Offset markerCenter = Offset(center.dx, center.dy - markerSize * 0.2);
 
-    // Build a classic drop-pin path: circle head + curved tail to tip
-    final Path pinPath = Path();
-    // Head circle path (approximate by arc)
-    pinPath.addOval(Rect.fromCircle(center: headCenter, radius: headRadius));
-    // Tail path (rounded triangular using beziers)
-    final double tailWidth = headRadius * 0.9;
-    final Offset leftAttach = Offset(headCenter.dx - tailWidth * 0.55, headCenter.dy + headRadius * 0.3);
-    final Offset rightAttach = Offset(headCenter.dx + tailWidth * 0.55, headCenter.dy + headRadius * 0.3);
-    final Path tail = Path()
-      ..moveTo(leftAttach.dx, leftAttach.dy)
-      ..quadraticBezierTo(
-        headCenter.dx - tailWidth * 0.25,
-        headCenter.dy + headRadius * 1.1,
-        tip.dx,
-        tip.dy,
-      )
-      ..quadraticBezierTo(
-        headCenter.dx + tailWidth * 0.25,
-        headCenter.dy + headRadius * 1.1,
-        rightAttach.dx,
-        rightAttach.dy,
-      )
-      ..close();
+    // Outer glow ring
+    final Paint outerGlow = Paint()
+      ..color = color.withValues(alpha: 0.3)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 15);
+    canvas.drawCircle(markerCenter, markerSize + 8, outerGlow);
 
-    // Combine head + tail by drawing tail then overlay head to keep perfect circle
-    // Shadow for the tail
-    canvas.drawShadow(tail, Colors.black.withValues(alpha: 0.35), 6, true);
+    // Inner glow ring
+    final Paint innerGlow = Paint()
+      ..color = color.withValues(alpha: 0.5)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
+    canvas.drawCircle(markerCenter, markerSize + 4, innerGlow);
 
-    // Gradient fill for head
-    final HSLColor hsl = HSLColor.fromColor(color);
-    final Color light = hsl.withLightness((hsl.lightness + 0.18).clamp(0.0, 1.0)).toColor();
-    final Color dark = hsl.withLightness((hsl.lightness - 0.10).clamp(0.0, 1.0)).toColor();
-    final Paint tailFill = Paint()..color = dark.withValues(alpha: 0.95);
-    final Paint headFill = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [light, dark],
-      ).createShader(Rect.fromCircle(center: headCenter, radius: headRadius));
+    // Main marker background with gradient
+    final Paint markerFill = Paint()
+      ..shader = RadialGradient(
+        colors: [
+          color.withValues(alpha: 0.9),
+          color.withValues(alpha: 0.7),
+          color.withValues(alpha: 0.4),
+        ],
+      ).createShader(Rect.fromCircle(center: markerCenter, radius: markerSize));
+    canvas.drawCircle(markerCenter, markerSize, markerFill);
 
-    // Stroke/border
-    final Paint border = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.0
-      ..color = Colors.white.withValues(alpha: 0.95);
+    // White border (removed for cleaner look)
+    // final Paint border = Paint()
+    //   ..style = PaintingStyle.stroke
+    //   ..strokeWidth = 2.0
+    //   ..color = Colors.white.withValues(alpha: 0.9);
+    // canvas.drawCircle(markerCenter, markerSize, border);
 
-    // Draw tail and head
-    canvas.drawPath(tail, tailFill);
-    canvas.drawCircle(headCenter, headRadius, headFill);
-    canvas.drawCircle(headCenter, headRadius, border);
+    // Inner white circle for icon background (removed for cleaner look)
+    // final Paint innerCircle = Paint()
+    //   ..color = Colors.white.withValues(alpha: 0.9);
+    // canvas.drawCircle(markerCenter, markerSize * 0.7, innerCircle);
 
-    // Inner white dot for precision
-    canvas.drawCircle(headCenter, headRadius * 0.18, Paint()..color = Colors.white.withValues(alpha: 0.95));
-
-    // Ground ellipse (subtle contact shadow)
-    final double ellipseW = headRadius * 2.0;
-    final double ellipseH = headRadius * 0.55;
-    final Rect ellipseRect = Rect.fromCenter(
-      center: Offset(center.dx, tip.dy + headRadius * 0.18),
-      width: ellipseW,
-      height: ellipseH,
+    // Draw emoji
+    final String emoji = customEmoji ?? _getDefaultEmoji();
+    final TextPainter emojiPainter = TextPainter(
+      text: TextSpan(
+        text: emoji,
+        style: TextStyle(
+          fontSize: markerSize * 1.2,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    
+    emojiPainter.paint(
+      canvas,
+      Offset(
+        markerCenter.dx - emojiPainter.width / 2,
+        markerCenter.dy - emojiPainter.height / 2,
+      ),
     );
-    final Paint ground = Paint()..color = Colors.black.withValues(alpha: 0.12);
-    canvas.drawOval(ellipseRect, ground);
 
-    // Label (two-line chip)
-    final double maxLabelWidth = size.width * 0.92;
+    // Pulsing ring effect (subtle)
+    final Paint pulseRing = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5
+      ..color = color.withValues(alpha: 0.4);
+    canvas.drawCircle(markerCenter, markerSize * 1.2, pulseRing);
+
+    // AR-style floating label
+    final double maxLabelWidth = size.width * 0.9;
     final TextPainter titlePainter = TextPainter(
       text: TextSpan(
         text: title,
         style: const TextStyle(
-          color: Colors.black87,
+          color: Colors.white,
           fontWeight: FontWeight.w700,
-          fontSize: 13,
+          fontSize: 12,
           letterSpacing: 0.2,
         ),
       ),
@@ -978,10 +1014,10 @@ class _MapPinPainter extends CustomPainter {
     final TextPainter subtitlePainter = TextPainter(
       text: TextSpan(
         text: subtitle,
-        style: const TextStyle(
-          color: Colors.black54,
+        style: TextStyle(
+          color: Colors.white.withValues(alpha: 0.9),
           fontWeight: FontWeight.w500,
-          fontSize: 11,
+          fontSize: 10,
           letterSpacing: 0.1,
         ),
       ),
@@ -990,49 +1026,66 @@ class _MapPinPainter extends CustomPainter {
       ellipsis: '…',
     )..layout(maxWidth: maxLabelWidth);
 
-    const double labelHPad = 10.0;
-    const double labelVPad = 7.0;
-    const double lineSpacing = 2.0;
+    const double labelHPad = 12.0;
+    const double labelVPad = 8.0;
+    const double lineSpacing = 3.0;
 
     final double contentWidth = math.max(titlePainter.width, subtitlePainter.width);
     final double contentHeight = titlePainter.height + lineSpacing + subtitlePainter.height;
 
-    final RRect chip = RRect.fromRectAndRadius(
+    // Label background with AR-style design
+    final RRect labelBg = RRect.fromRectAndRadius(
       Rect.fromCenter(
-        center: Offset(center.dx, ellipseRect.center.dy + ellipseRect.height / 2 + 16),
+        center: Offset(center.dx, markerCenter.dy + markerSize + 25),
         width: contentWidth + 2 * labelHPad,
         height: contentHeight + 2 * labelVPad,
       ),
-      const Radius.circular(12),
+      Radius.circular(16),
     );
 
-    // Drop shadow for the chip
-    final Paint chipShadow = Paint()
-      ..color = Colors.black.withValues(alpha: 0.18)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
+    // Label glow effect
+    final Paint labelGlow = Paint()
+      ..color = Colors.black.withValues(alpha: 0.4)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12);
     canvas.save();
-    canvas.translate(0, 1);
-    canvas.drawRRect(chip, chipShadow);
+    canvas.translate(0, 2);
+    canvas.drawRRect(labelBg, labelGlow);
     canvas.restore();
 
-    // Chip background
-    final Paint chipBg = Paint()..color = Colors.white.withValues(alpha: 0.92);
-    canvas.drawRRect(chip, chipBg);
+    // Label background with gradient
+    final Paint labelBgFill = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          Colors.black.withValues(alpha: 0.8),
+          Colors.black.withValues(alpha: 0.6),
+        ],
+      ).createShader(labelBg.outerRect);
+    canvas.drawRRect(labelBg, labelBgFill);
 
-    final double titleLeft = chip.center.dx - (titlePainter.width / 2);
-    final double subtitleLeft = chip.center.dx - (subtitlePainter.width / 2);
-    titlePainter.paint(canvas, Offset(titleLeft, chip.top + labelVPad));
+    // Label border
+    final Paint labelBorder = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0
+      ..color = color.withValues(alpha: 0.6);
+    canvas.drawRRect(labelBg, labelBorder);
+
+    // Draw text
+    final double titleLeft = labelBg.center.dx - (titlePainter.width / 2);
+    final double subtitleLeft = labelBg.center.dx - (subtitlePainter.width / 2);
+    titlePainter.paint(canvas, Offset(titleLeft, labelBg.top + labelVPad));
     subtitlePainter.paint(
       canvas,
       Offset(
         subtitleLeft,
-        chip.top + labelVPad + titlePainter.height + lineSpacing,
+        labelBg.top + labelVPad + titlePainter.height + lineSpacing,
       ),
     );
   }
 
   @override
   bool shouldRepaint(covariant _MapPinPainter oldDelegate) {
-    return oldDelegate.color != color || oldDelegate.title != title || oldDelegate.subtitle != subtitle;
+    return oldDelegate.color != color || oldDelegate.title != title || oldDelegate.subtitle != subtitle || oldDelegate.customEmoji != customEmoji;
   }
 }

@@ -7,6 +7,7 @@ class Hotspot {
   final String updatedAt;
   final String status;
   final List<HotspotFeature> features;
+  final String? emoji;
 
   Hotspot({
     required this.hotspotId,
@@ -17,6 +18,7 @@ class Hotspot {
     required this.updatedAt,
     required this.status,
     required this.features,
+    this.emoji,
   });
 
   factory Hotspot.fromJson(Map<String, dynamic> json) {
@@ -31,6 +33,7 @@ class Hotspot {
       features: (json['features'] as List<dynamic>?)
           ?.map((feature) => HotspotFeature.fromJson(feature))
           .toList() ?? [],
+      emoji: json['emoji'],
     );
   }
 
@@ -44,6 +47,7 @@ class Hotspot {
       'updatedAt': updatedAt,
       'status': status,
       'features': features.map((feature) => feature.toJson()).toList(),
+      if (emoji != null) 'emoji': emoji,
     };
   }
 }
