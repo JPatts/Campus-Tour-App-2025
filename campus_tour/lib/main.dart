@@ -258,8 +258,8 @@ class _HomeWithNavState extends State<HomeWithNav> {
             label: 'Home',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.camera_alt),
-            label: 'Camera',
+            icon: Icon(Icons.view_in_ar),
+            label: 'AR',
           ),
         ],
           ),

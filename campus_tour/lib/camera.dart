@@ -32,6 +32,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
 
   bool _initializing = true;
   String _error = '';
+  bool _retrying = false; // keep error screen visible during retry
 
   @override
   void initState() {
@@ -90,10 +91,10 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
   Future<void> _ensurePermissions() async {
     final statuses = await [Permission.camera, Permission.locationWhenInUse].request();
     if (statuses[Permission.camera] != PermissionStatus.granted) {
-      throw Exception('Camera permission denied');
+      throw Exception('camera_permission_denied');
     }
     if (statuses[Permission.locationWhenInUse] != PermissionStatus.granted) {
-      throw Exception('Location permission denied');
+      throw Exception('location_permission_denied');
     }
   }
 
@@ -188,11 +189,11 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
 
   @override
   Widget build(BuildContext context) {
+    if (_error.isNotEmpty) {
+      return _buildErrorScreen();
+    }
     if (_initializing) {
       return const Center(child: CircularProgressIndicator());
-    }
-    if (_error.isNotEmpty) {
-      return Center(child: Text(_error, style: const TextStyle(color: Colors.red)));
     }
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -253,6 +254,11 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                 if (distanceM > 800) continue;
                 
                 hasNearbyHotspots = true;
+
+                // Hide marker when the user is inside the hotspot radius ("0 ft left")
+                if (distanceM <= hs.location.radius) {
+                  continue;
+                }
                 final targetBearing = _bearingTo(hs);
                 final screenPos = _projectHotspotToScreen(size, targetBearing);
 
@@ -358,7 +364,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                               ),
                               const SizedBox(height: 20),
                               Text(
-                                'No nearby hotspots',
+                                'No locations nearby',
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 20,
@@ -368,41 +374,13 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                               ),
                               const SizedBox(height: 12),
                               Text(
-                                'Move to a different location\nto find AR hotspots',
+                                'Walk around campus to discover AR hotspots',
                                 style: TextStyle(
-                                  color: Colors.white.withValues(alpha: 0.8),
-                                  fontSize: 15,
+                                  color: Colors.white70,
+                                  fontSize: 16,
                                   height: 1.4,
                                 ),
                                 textAlign: TextAlign.center,
-                              ),
-                              const SizedBox(height: 16),
-                              // Directional arrow hint
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.directions_walk,
-                                      color: Colors.white.withValues(alpha: 0.7),
-                                      size: 16,
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      'Try walking around',
-                                      style: TextStyle(
-                                        color: Colors.white.withValues(alpha: 0.7),
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ],
-                                ),
                               ),
                             ],
                           ),
@@ -411,112 +389,128 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                     ),
                   );
                 } else {
-                  // Has nearby hotspots but not in view - need to turn phone
-                  widgets.add(
-                    Positioned(
-                      top: size.height * 0.35,
-                      left: 0,
-                      right: 0,
-                      child: Center(
-                        child: Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 32),
-                          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                Colors.black.withValues(alpha: 0.9),
-                                Colors.black.withValues(alpha: 0.85),
+                  // Has nearby hotspots but not in view - show directional arrows
+                  // Find the nearest hotspot to determine direction
+                  Hotspot? nearestHotspot;
+                  double nearestDistance = double.infinity;
+                  
+                  for (final hs in _hotspots) {
+                    final double distanceM = _hotspotService.calculateDistance(
+                      position.latitude,
+                      position.longitude,
+                      hs.location.latitude,
+                      hs.location.longitude,
+                    );
+                    if (distanceM < nearestDistance) {
+                      nearestDistance = distanceM;
+                      nearestHotspot = hs;
+                    }
+                  }
+                  
+                  if (nearestHotspot != null) {
+                    final double targetBearing = _bearingTo(nearestHotspot);
+                    final double angleDiff = (targetBearing - _headingDegrees + 540) % 360 - 180; // [-180,180]
+                    
+                    // Determine which arrow to show based on angle difference
+                    IconData arrowIcon;
+                    String directionText;
+                    
+                    if (angleDiff.abs() < 45) {
+                      // Hotspot is roughly in front, show up arrow
+                      arrowIcon = Icons.keyboard_arrow_up;
+                      directionText = 'Look up';
+                    } else if (angleDiff > 45 && angleDiff < 135) {
+                      // Hotspot is to the right, show right arrow
+                      arrowIcon = Icons.keyboard_arrow_right;
+                      directionText = 'Turn right';
+                    } else if (angleDiff < -45 && angleDiff > -135) {
+                      // Hotspot is to the left, show left arrow
+                      arrowIcon = Icons.keyboard_arrow_left;
+                      directionText = 'Turn left';
+                    } else {
+                      // Hotspot is behind, show down arrow
+                      arrowIcon = Icons.keyboard_arrow_down;
+                      directionText = 'Turn around';
+                    }
+                    
+                    widgets.add(
+                      Positioned(
+                        top: size.height * 0.35,
+                        left: 0,
+                        right: 0,
+                        child: Center(
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 32),
+                            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  Colors.black.withValues(alpha: 0.9),
+                                  Colors.black.withValues(alpha: 0.85),
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.2),
+                                width: 1,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.3),
+                                  blurRadius: 20,
+                                  offset: const Offset(0, 10),
+                                ),
                               ],
                             ),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.2),
-                              width: 1,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.3),
-                                blurRadius: 20,
-                                offset: const Offset(0, 10),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              // Animated icon container
-                              Container(
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: Colors.orange.withValues(alpha: 0.2),
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: Colors.orange.withValues(alpha: 0.4),
-                                    width: 2,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                // Animated arrow container
+                                Container(
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: Colors.orange.withValues(alpha: 0.2),
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: Colors.orange.withValues(alpha: 0.4),
+                                      width: 2,
+                                    ),
+                                  ),
+                                  child: Icon(
+                                    arrowIcon,
+                                    color: Colors.orange.shade300,
+                                    size: 40,
                                   ),
                                 ),
-                                child: Icon(
-                                  Icons.rotate_right_rounded,
-                                  color: Colors.orange.shade300,
-                                  size: 40,
+                                const SizedBox(height: 20),
+                                Text(
+                                  directionText,
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 0.5,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(height: 20),
-                              Text(
-                                'Turn your phone',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: 0.5,
+                                const SizedBox(height: 12),
+                                Text(
+                                  '${nearestHotspot.name} is ${(nearestDistance * 3.28084).toStringAsFixed(0)} ft away',
+                                  style: TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 16,
+                                    height: 1.4,
+                                  ),
+                                  textAlign: TextAlign.center,
                                 ),
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                'Point your camera in different\ndirections to find hotspots',
-                                style: TextStyle(
-                                  color: Colors.white.withValues(alpha: 0.8),
-                                  fontSize: 15,
-                                  height: 1.4,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                              const SizedBox(height: 16),
-                              // Directional arrows hint
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.swap_horiz,
-                                      color: Colors.white.withValues(alpha: 0.7),
-                                      size: 16,
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      'Sweep left and right',
-                                      style: TextStyle(
-                                        color: Colors.white.withValues(alpha: 0.7),
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  );
+                    );
+                  }
                 }
               }
 
@@ -654,6 +648,232 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
       await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
     }
+  }
+
+  Widget _buildErrorScreen() {
+    String title;
+    String message;
+    IconData icon;
+    Color iconColor;
+    List<String> steps;
+
+    if (_error.contains('camera_permission_denied')) {
+      title = 'Camera Access Required';
+      message = 'The AR experience needs camera access to show you nearby locations.';
+      icon = Icons.camera_alt_outlined;
+      iconColor = Colors.orange;
+      steps = [
+        'Open your device Settings',
+        'Find "Campus Tour App"',
+        'Tap "Camera"',
+        'Select "Allow"'
+      ];
+    } else if (_error.contains('location_permission_denied')) {
+      title = 'Location Access Required';
+      message = 'The AR experience needs location access to show you nearby locations.';
+      icon = Icons.location_on_outlined;
+      iconColor = Colors.blue;
+      steps = [
+        'Open your device Settings',
+        'Find "Campus Tour App"',
+        'Tap "Location"',
+        'Select "While Using App"'
+      ];
+    } else {
+      title = 'Something Went Wrong';
+      message = 'We encountered an issue while setting up the AR experience.';
+      icon = Icons.error_outline;
+      iconColor = Colors.red;
+      steps = [
+        'Check your internet connection',
+        'Restart the app',
+        'If the problem persists, contact support'
+      ];
+    }
+
+    return Scaffold(
+      backgroundColor: const Color(0xFF213921),
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Icon
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: iconColor.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: iconColor.withValues(alpha: 0.3),
+                      width: 2,
+                    ),
+                  ),
+                  child: Icon(
+                    icon,
+                    size: 64,
+                    color: iconColor,
+                  ),
+                ),
+                const SizedBox(height: 32),
+                
+                // Title
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                
+                // Message
+                Text(
+                  message,
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 16,
+                    height: 1.5,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 32),
+                
+                // Steps
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      width: 1,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'How to fix:',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      ...steps.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final step = entry.value;
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                width: 24,
+                                height: 24,
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.2),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    '${index + 1}',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  step,
+                                  style: const TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 14,
+                                    height: 1.4,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 32),
+                
+                // Retry button with smooth transition (keeps error screen visible)
+                ElevatedButton.icon(
+                  onPressed: _retrying ? null : () async {
+                    // Keep error UI visible during retry
+                    setState(() {
+                      _retrying = true;
+                    });
+
+                    try {
+                      await _ensurePermissions();
+                      await _loadHotspots();
+                      await _getInitialLocation();
+                      _startLocationStream();
+                      _startHeadingStream();
+                      await _setupCamera();
+                      _startUiTicker();
+
+                      if (mounted) {
+                        // Clear error only when fully ready
+                        setState(() {
+                          _error = '';
+                          _initializing = false;
+                          _retrying = false;
+                        });
+                      }
+                    } catch (e) {
+                      if (mounted) {
+                        // Keep showing error; just stop the spinner
+                        setState(() {
+                          _error = 'AR init error: $e';
+                          _retrying = false;
+                        });
+                      }
+                    }
+                  },
+                  icon: _retrying
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF213921)),
+                        ),
+                      )
+                    : const Icon(Icons.refresh),
+                  label: Text(_retrying ? 'Initializing...' : 'Try Again'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: const Color(0xFF213921),
+                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 

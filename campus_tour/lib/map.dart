@@ -164,6 +164,7 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
   Position? _currentPosition;
   bool _isLoading = true;
   String _errorMessage = '';
+  bool _retrying = false; // keep error screen visible during retry
   List<Hotspot> _hotspots = [];
   final HotspotService _hotspotService = HotspotService();
   StreamSubscription<Position>? _positionSubscription;
@@ -319,7 +320,7 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
       }
 
       if (!status.isGranted) {
-        throw Exception('Location permission denied');
+        throw Exception('location_permission_denied');
       }
     }
   }
@@ -335,12 +336,12 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
-          throw Exception('Location permissions are denied');
+          throw Exception('location_permission_denied');
         }
       }
 
       if (permission == LocationPermission.deniedForever) {
-        throw Exception('Location permissions are permanently denied');
+        throw Exception('location_permission_denied_forever');
       }
 
       Position position = await Geolocator.getCurrentPosition(
@@ -1160,72 +1161,7 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
     }
 
     if (_errorMessage.isNotEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline, size: 48, color: Colors.red),
-              const SizedBox(height: 16),
-              Text(
-                _errorMessage,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.red),
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () {
-                  setState(() {
-                    _errorMessage = '';
-                    _isLoading = true;
-                  });
-                  _initializeMap();
-                },
-                child: const Text('Retry'),
-              ),
-              const SizedBox(height: 8),
-              TextButton(
-                onPressed: () {
-                  // Show detailed troubleshooting info
-                  showDialog(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title: const Text('Troubleshooting'),
-                      content: const SingleChildScrollView(
-                        child: Text(
-                          'Common issues:\n\n'
-                          '1. Google Maps API Key:\n'
-                          '   • Check if API key is valid\n'
-                          '   • Ensure iOS restrictions are set correctly\n'
-                          '   • Verify Maps SDK for iOS is enabled\n\n'
-                          '2. Location Permissions:\n'
-                          '   • Allow location access in Settings\n'
-                          '   • Enable Location Services\n\n'
-                          '3. Network Connection:\n'
-                          '   • Check internet connectivity\n'
-                          '   • Try switching between WiFi/Cellular\n\n'
-                          '4. Device Issues:\n'
-                          '   • Restart the app\n'
-                          '   • Restart the device\n'
-                          '   • Clear app data if needed',
-                        ),
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          child: const Text('Close'),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-                child: const Text('Troubleshooting'),
-              ),
-            ],
-          ),
-        ),
-      );
+      return _buildErrorScreen();
     }
 
     super.build(context);
@@ -1391,6 +1327,251 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
     _positionSubscription?.cancel();
     _boundaryTimer?.cancel();
     super.dispose();
+  }
+
+  Widget _buildErrorScreen() {
+    String title;
+    String message;
+    IconData icon;
+    Color iconColor;
+    List<String> steps;
+
+    if (_errorMessage.contains('location_permission_denied')) {
+      title = 'Location Access Required';
+      message = 'The map needs location access to show your position and nearby hotspots.';
+      icon = Icons.location_on_outlined;
+      iconColor = Colors.blue;
+      steps = [
+        'Open your device Settings',
+        'Find "Campus Tour App"',
+        'Tap "Location"',
+        'Select "While Using App"'
+      ];
+    } else if (_errorMessage.contains('location_permission_denied_forever')) {
+      title = 'Location Access Blocked';
+      message = 'Location access has been permanently denied. You need to enable it in Settings.';
+      icon = Icons.location_off_outlined;
+      iconColor = Colors.red;
+      steps = [
+        'Open your device Settings',
+        'Find "Campus Tour App"',
+        'Tap "Location"',
+        'Select "While Using App"',
+        'If not available, tap "Reset Location & Privacy"'
+      ];
+    } else if (_errorMessage.contains('Location services are disabled')) {
+      title = 'Location Services Disabled';
+      message = 'Please enable Location Services in your device settings.';
+      icon = Icons.location_disabled_outlined;
+      iconColor = Colors.orange;
+      steps = [
+        'Open your device Settings',
+        'Tap "Privacy & Security"',
+        'Tap "Location Services"',
+        'Turn on "Location Services"'
+      ];
+    } else if (_errorMessage.contains('Google Maps API')) {
+      title = 'Map Loading Issue';
+      message = 'There was a problem loading the map. This might be a temporary issue.';
+      icon = Icons.map_outlined;
+      iconColor = Colors.orange;
+      steps = [
+        'Check your internet connection',
+        'Try again in a few moments',
+        'If the problem persists, restart the app'
+      ];
+    } else {
+      title = 'Something Went Wrong';
+      message = 'We encountered an issue while loading the map.';
+      icon = Icons.error_outline;
+      iconColor = Colors.red;
+      steps = [
+        'Check your internet connection',
+        'Restart the app',
+        'If the problem persists, contact support'
+      ];
+    }
+
+    return Scaffold(
+      backgroundColor: const Color(0xFF213921),
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Icon
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: iconColor.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: iconColor.withValues(alpha: 0.3),
+                      width: 2,
+                    ),
+                  ),
+                  child: Icon(
+                    icon,
+                    size: 64,
+                    color: iconColor,
+                  ),
+                ),
+                const SizedBox(height: 32),
+                
+                // Title
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                
+                // Message
+                Text(
+                  message,
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 16,
+                    height: 1.5,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 32),
+                
+                // Steps
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      width: 1,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'How to fix:',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      ...steps.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final step = entry.value;
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                width: 24,
+                                height: 24,
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.2),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    '${index + 1}',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  step,
+                                  style: const TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 14,
+                                    height: 1.4,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 32),
+                
+                // Retry button with smooth transition (keeps error screen visible)
+                ElevatedButton.icon(
+                  onPressed: _retrying ? null : () async {
+                    // Keep error UI visible during retry
+                    setState(() {
+                      _retrying = true;
+                    });
+
+                    try {
+                      await _requestLocationPermission();
+                      await _getCurrentLocation();
+                      await _loadHotspots();
+                      _startPositionStream();
+                      
+                      if (mounted) {
+                        // Clear error only when fully ready
+                        setState(() {
+                          _errorMessage = '';
+                          _isLoading = false;
+                          _retrying = false;
+                        });
+                      }
+                    } catch (e) {
+                      if (mounted) {
+                        // Keep showing error; just stop the spinner
+                        setState(() {
+                          _errorMessage = 'Error initializing map: $e';
+                          _retrying = false;
+                        });
+                      }
+                    }
+                  },
+                  icon: _retrying
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF213921)),
+                        ),
+                      )
+                    : const Icon(Icons.refresh),
+                  label: Text(_retrying ? 'Initializing...' : 'Try Again'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: const Color(0xFF213921),
+                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 

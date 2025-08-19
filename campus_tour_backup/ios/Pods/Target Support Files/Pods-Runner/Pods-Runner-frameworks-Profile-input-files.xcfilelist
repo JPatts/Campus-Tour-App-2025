@@ -1,0 +1,3 @@
+${PODS_ROOT}/Target Support Files/Pods-Runner/Pods-Runner-frameworks.sh
+${BUILT_PRODUCTS_DIR}/flutter_compass/flutter_compass.framework
+${BUILT_PRODUCTS_DIR}/geolocator_apple/geolocator_apple.framework

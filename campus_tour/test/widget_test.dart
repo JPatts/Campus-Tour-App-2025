@@ -20,7 +20,7 @@ void main() {
     // BottomNavigationBar labels
     expect(find.text('Map'), findsOneWidget);
     expect(find.text('Home'), findsOneWidget);
-    expect(find.text('Camera'), findsOneWidget);
+    expect(find.text('AR'), findsOneWidget);
 
     // Tapping Map should navigate to map page (no AppBar on non-center pages)
     await tester.tap(find.text('Map'));
