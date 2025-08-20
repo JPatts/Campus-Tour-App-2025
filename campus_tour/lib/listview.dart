@@ -4,6 +4,7 @@ import 'package:campus_tour/services/hotspot_service.dart';
 import 'package:flutter/material.dart';
 import 'dart:io';
 
+
 var myImage = File(
   '../assets/hotspots/exampleHotspot/Assets/photoOfBali.jpg',
 );

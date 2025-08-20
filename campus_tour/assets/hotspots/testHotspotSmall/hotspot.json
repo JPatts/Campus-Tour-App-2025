@@ -1,0 +1,22 @@
+{
+    "hotspotId": "testHotspotSmall",
+    "name": "Test Hotspot Small",
+    "description": "A test hotspot with a smaller radius for testing purposes.",
+    "location": {
+        "latitude": 45.509051,
+        "longitude": -122.542429,
+        "radius": 30.00
+    },
+    "createdAt": "2025-08-18T12:00:00Z",
+    "updatedAt": "2025-08-18T12:00:00Z",
+
+    "status": "active",
+    "features": [
+        {
+            "featureId": "1",
+            "type": "photo",
+            "content": "Test photo for small hotspot.",
+            "fileLocation": "test_photo.jpg"
+        }
+    ]
+}

@@ -17,6 +17,11 @@ final myService = HotspotService();
 void main() {
   runZonedGuarded(() {
     WidgetsFlutterBinding.ensureInitialized();
+    // Lock the app to portrait orientation only
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
     debugPrint('App starting...');
     runApp(const MyApp());
     myService.loadHotspots();
@@ -257,8 +262,8 @@ class _HomeWithNavState extends State<HomeWithNav> {
             label: 'Home',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.camera_alt),
-            label: 'Camera',
+            icon: Icon(Icons.view_in_ar),
+            label: 'AR',
           ),
         ],
           ),

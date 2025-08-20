@@ -32,6 +32,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
 
   bool _initializing = true;
   String _error = '';
+  bool _retrying = false; // keep error screen visible during retry
 
   @override
   void initState() {
@@ -53,12 +54,19 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     final CameraController? cam = _cameraController;
-    if (cam == null || !cam.value.isInitialized) return;
-
-    if (state == AppLifecycleState.inactive) {
-      cam.dispose();
+    
+    if (state == AppLifecycleState.inactive || state == AppLifecycleState.paused) {
+      // Dispose camera when app goes to background
+      if (cam != null && cam.value.isInitialized) {
+        cam.dispose();
+        _cameraController = null;
+        _cameraInitFuture = null;
+      }
     } else if (state == AppLifecycleState.resumed) {
-      _setupCamera();
+      // Reinitialize camera when app comes back to foreground
+      if (cam == null || !cam.value.isInitialized) {
+        _setupCamera();
+      }
     }
   }
 
@@ -83,10 +91,10 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
   Future<void> _ensurePermissions() async {
     final statuses = await [Permission.camera, Permission.locationWhenInUse].request();
     if (statuses[Permission.camera] != PermissionStatus.granted) {
-      throw Exception('Camera permission denied');
+      throw Exception('camera_permission_denied');
     }
     if (statuses[Permission.locationWhenInUse] != PermissionStatus.granted) {
-      throw Exception('Location permission denied');
+      throw Exception('location_permission_denied');
     }
   }
 
@@ -181,11 +189,11 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
 
   @override
   Widget build(BuildContext context) {
+    if (_error.isNotEmpty) {
+      return _buildErrorScreen();
+    }
     if (_initializing) {
       return const Center(child: CircularProgressIndicator());
-    }
-    if (_error.isNotEmpty) {
-      return Center(child: Text(_error, style: const TextStyle(color: Colors.red)));
     }
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -194,14 +202,19 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
         fit: StackFit.expand,
         children: [
         // Camera preview
-        if (_cameraController != null)
+        if (_cameraController != null && _cameraController!.value.isInitialized)
           FutureBuilder<void>(
             future: _cameraInitFuture,
             builder: (context, snapshot) {
               if (snapshot.connectionState != ConnectionState.done) {
                 return const ColoredBox(color: Colors.black);
               }
-              return CameraPreview(_cameraController!);
+              // Check if controller is still valid before building preview
+              if (_cameraController != null && _cameraController!.value.isInitialized) {
+                return CameraPreview(_cameraController!);
+              } else {
+                return const ColoredBox(color: Colors.black);
+              }
             },
           )
         else
@@ -227,6 +240,9 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
               if (position == null) return const SizedBox.shrink();
 
               final widgets = <Widget>[];
+              bool hasVisibleHotspots = false;
+              bool hasNearbyHotspots = false;
+              
               for (final hs in _hotspots) {
                 final double distanceM = _hotspotService.calculateDistance(
                   position.latitude,
@@ -234,8 +250,15 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                   hs.location.latitude,
                   hs.location.longitude,
                 );
-                // Only render if within some max range (e.g., 500m)
-                if (distanceM > 800) continue;
+                // Only render if within 1000 feet (305 meters)
+                if (distanceM > 305) continue;
+                
+                hasNearbyHotspots = true;
+
+                // Hide marker when the user is inside the hotspot radius ("0 ft left")
+                if (distanceM <= hs.location.radius) {
+                  continue;
+                }
                 final targetBearing = _bearingTo(hs);
                 final screenPos = _projectHotspotToScreen(size, targetBearing);
 
@@ -246,9 +269,13 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
 
                 // Marker footprint and size
                 final double baseSize = 140;
-                final double scale = (1.0 - (distanceM / 800)).clamp(0.25, 1.0);
+                final double scale = (1.0 - (distanceM / 305)).clamp(0.25, 1.0);
                 final double diameter = baseSize * scale;
                 final double markerHeight = diameter * 1.7; // extra space for ring + label
+
+                if (visibility > 0.1) { // Only count as visible if opacity is significant
+                  hasVisibleHotspots = true;
+                }
 
                 widgets.add(
                   Positioned(
@@ -278,6 +305,242 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                     ),
                   ),
                 );
+              }
+              
+              // Show helpful messages when no hotspots are visible
+              if (!hasVisibleHotspots) {
+                if (!hasNearbyHotspots) {
+                  // No nearby hotspots - AR-style indicator
+                  widgets.add(
+                    Positioned(
+                      top: size.height * 0.4,
+                      left: 0,
+                      right: 0,
+                      child: Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Floating AR-style location indicator
+                            Container(
+                              width: 80,
+                              height: 80,
+                              decoration: BoxDecoration(
+                                gradient: RadialGradient(
+                                  colors: [
+                                    Colors.red.withValues(alpha: 0.8),
+                                    Colors.red.withValues(alpha: 0.3),
+                                    Colors.red.withValues(alpha: 0.1),
+                                  ],
+                                ),
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.red.withValues(alpha: 0.4),
+                                    blurRadius: 20,
+                                    spreadRadius: 5,
+                                  ),
+                                ],
+                              ),
+                              child: Icon(
+                                Icons.location_off_rounded,
+                                color: Colors.white,
+                                size: 50,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                                                          // Floating text with AR-style glow
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.6),
+                                  borderRadius: BorderRadius.circular(25),
+                                  border: Border.all(
+                                    color: Colors.green.withValues(alpha: 0.6),
+                                    width: 1,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.green.withValues(alpha: 0.3),
+                                      blurRadius: 10,
+                                      spreadRadius: 2,
+                                    ),
+                                  ],
+                                ),
+                              child: Text(
+                                'No locations nearby',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            // Suggestion text with AR-style design
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.4),
+                                borderRadius: BorderRadius.circular(15),
+                                border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.3),
+                                  width: 0.5,
+                                ),
+                              ),
+                              child: Text(
+                                'Walk around campus to discover AR hotspots',
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.9),
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                } else {
+                  // Has nearby hotspots but not in view - show directional arrows
+                  // Find the nearest hotspot to determine direction
+                  Hotspot? nearestHotspot;
+                  double nearestDistance = double.infinity;
+                  
+                  for (final hs in _hotspots) {
+                    final double distanceM = _hotspotService.calculateDistance(
+                      position.latitude,
+                      position.longitude,
+                      hs.location.latitude,
+                      hs.location.longitude,
+                    );
+                    if (distanceM < nearestDistance) {
+                      nearestDistance = distanceM;
+                      nearestHotspot = hs;
+                    }
+                  }
+                  
+                  if (nearestHotspot != null) {
+                    final double targetBearing = _bearingTo(nearestHotspot);
+                    final double angleDiff = (targetBearing - _headingDegrees + 540) % 360 - 180; // [-180,180]
+                    
+                    // Determine which arrow to show based on angle difference
+                    IconData arrowIcon;
+                    String directionText;
+                    
+                    if (angleDiff.abs() < 45) {
+                      // Hotspot is roughly in front, show up arrow
+                      arrowIcon = Icons.keyboard_arrow_up;
+                      directionText = 'Look up';
+                    } else if (angleDiff > 45 && angleDiff < 135) {
+                      // Hotspot is to the right, show right arrow
+                      arrowIcon = Icons.keyboard_arrow_right;
+                      directionText = 'Turn right';
+                    } else if (angleDiff < -45 && angleDiff > -135) {
+                      // Hotspot is to the left, show left arrow
+                      arrowIcon = Icons.keyboard_arrow_left;
+                      directionText = 'Turn left';
+                    } else {
+                      // Hotspot is behind, show down arrow
+                      arrowIcon = Icons.keyboard_arrow_down;
+                      directionText = 'Turn around';
+                    }
+                    
+                    // AR-style directional indicator
+                    widgets.add(
+                      Positioned(
+                        top: size.height * 0.4,
+                        left: 0,
+                        right: 0,
+                        child: Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // Floating AR-style arrow indicator
+                              Container(
+                                width: 80,
+                                height: 80,
+                                decoration: BoxDecoration(
+                                  gradient: RadialGradient(
+                                    colors: [
+                                      Colors.green.withValues(alpha: 0.8),
+                                      Colors.green.withValues(alpha: 0.3),
+                                      Colors.green.withValues(alpha: 0.1),
+                                    ],
+                                  ),
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.green.withValues(alpha: 0.4),
+                                      blurRadius: 20,
+                                      spreadRadius: 5,
+                                    ),
+                                  ],
+                                ),
+                                child: Icon(
+                                  arrowIcon,
+                                  color: Colors.white,
+                                  size: 50,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              // Floating text with AR-style glow
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.6),
+                                  borderRadius: BorderRadius.circular(25),
+                                  border: Border.all(
+                                    color: Colors.green.withValues(alpha: 0.6),
+                                    width: 1,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.green.withValues(alpha: 0.3),
+                                      blurRadius: 10,
+                                      spreadRadius: 2,
+                                    ),
+                                  ],
+                                ),
+                                child: Text(
+                                  directionText,
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              // Distance indicator with AR-style design
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.4),
+                                  borderRadius: BorderRadius.circular(15),
+                                  border: Border.all(
+                                    color: Colors.white.withValues(alpha: 0.3),
+                                    width: 0.5,
+                                  ),
+                                ),
+                                child: Text(
+                                  '${nearestHotspot.name} • ${(nearestDistance * 3.28084).toStringAsFixed(0)} ft',
+                                  style: TextStyle(
+                                    color: Colors.white.withValues(alpha: 0.9),
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  }
+                }
               }
 
               // Heading HUD
@@ -415,98 +678,331 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
       await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
     }
   }
+
+  Widget _buildErrorScreen() {
+    String title;
+    String message;
+    IconData icon;
+    Color iconColor;
+    List<String> steps;
+
+    if (_error.contains('camera_permission_denied')) {
+      title = 'Camera Access Required';
+      message = 'The AR experience needs camera access to show you nearby locations.';
+      icon = Icons.camera_alt_outlined;
+      iconColor = Colors.orange;
+      steps = [
+        'Open your device Settings',
+        'Find "Campus Tour App"',
+        'Tap "Camera"',
+        'Select "Allow"'
+      ];
+    } else if (_error.contains('location_permission_denied')) {
+      title = 'Location Access Required';
+      message = 'The AR experience needs location access to show you nearby locations.';
+      icon = Icons.location_on_outlined;
+      iconColor = Colors.blue;
+      steps = [
+        'Open your device Settings',
+        'Find "Campus Tour App"',
+        'Tap "Location"',
+        'Select "While Using App"'
+      ];
+    } else {
+      title = 'Something Went Wrong';
+      message = 'We encountered an issue while setting up the AR experience.';
+      icon = Icons.error_outline;
+      iconColor = Colors.red;
+      steps = [
+        'Check your internet connection',
+        'Restart the app',
+        'If the problem persists, contact support'
+      ];
+    }
+
+    return Scaffold(
+      backgroundColor: const Color(0xFF213921),
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Icon
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: iconColor.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: iconColor.withValues(alpha: 0.3),
+                      width: 2,
+                    ),
+                  ),
+                  child: Icon(
+                    icon,
+                    size: 64,
+                    color: iconColor,
+                  ),
+                ),
+                const SizedBox(height: 32),
+                
+                // Title
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                
+                // Message
+                Text(
+                  message,
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 16,
+                    height: 1.5,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 32),
+                
+                // Steps
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      width: 1,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'How to fix:',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      ...steps.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final step = entry.value;
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                width: 24,
+                                height: 24,
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.2),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    '${index + 1}',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  step,
+                                  style: const TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 14,
+                                    height: 1.4,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 32),
+                
+                // Retry button with smooth transition (keeps error screen visible)
+                ElevatedButton.icon(
+                  onPressed: _retrying ? null : () async {
+                    // Keep error UI visible during retry
+                    setState(() {
+                      _retrying = true;
+                    });
+
+                    try {
+                      await _ensurePermissions();
+                      await _loadHotspots();
+                      await _getInitialLocation();
+                      _startLocationStream();
+                      _startHeadingStream();
+                      await _setupCamera();
+                      _startUiTicker();
+
+                      if (mounted) {
+                        // Clear error only when fully ready
+                        setState(() {
+                          _error = '';
+                          _initializing = false;
+                          _retrying = false;
+                        });
+                      }
+                    } catch (e) {
+                      if (mounted) {
+                        // Keep showing error; just stop the spinner
+                        setState(() {
+                          _error = 'AR init error: $e';
+                          _retrying = false;
+                        });
+                      }
+                    }
+                  },
+                  icon: _retrying
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF213921)),
+                        ),
+                      )
+                    : const Icon(Icons.refresh),
+                  label: Text(_retrying ? 'Initializing...' : 'Try Again'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: const Color(0xFF213921),
+                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _MapPinPainter extends CustomPainter {
   final Color color;
   final String title;
   final String subtitle;
-  _MapPinPainter({required this.color, required this.title, required this.subtitle});
+  final String? customEmoji;
+  _MapPinPainter({required this.color, required this.title, required this.subtitle, this.customEmoji});
+
+  // Get default emoji for hotspot type
+  String _getDefaultEmoji() {
+    final lowerTitle = title.toLowerCase();
+    if (lowerTitle.contains('library')) return '📚';
+    if (lowerTitle.contains('parking')) return '🅿️';
+    if (lowerTitle.contains('center') || lowerTitle.contains('scott')) return '🏟️';
+    if (lowerTitle.contains('test')) return '📚';
+    return '📍'; // default emoji
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
     final double base = math.min(size.width, size.height);
-    final double headRadius = base * 0.26;
+    final double markerSize = base * 0.3;
 
-    // Compute pin geometry
-    final Offset headCenter = Offset(center.dx, center.dy - headRadius * 0.2);
-    final Offset tip = Offset(center.dx, center.dy + headRadius * 2.15);
+    // AR-style floating marker with content icon
+    final Offset markerCenter = Offset(center.dx, center.dy - markerSize * 0.2);
 
-    // Build a classic drop-pin path: circle head + curved tail to tip
-    final Path pinPath = Path();
-    // Head circle path (approximate by arc)
-    pinPath.addOval(Rect.fromCircle(center: headCenter, radius: headRadius));
-    // Tail path (rounded triangular using beziers)
-    final double tailWidth = headRadius * 0.9;
-    final Offset leftAttach = Offset(headCenter.dx - tailWidth * 0.55, headCenter.dy + headRadius * 0.3);
-    final Offset rightAttach = Offset(headCenter.dx + tailWidth * 0.55, headCenter.dy + headRadius * 0.3);
-    final Path tail = Path()
-      ..moveTo(leftAttach.dx, leftAttach.dy)
-      ..quadraticBezierTo(
-        headCenter.dx - tailWidth * 0.25,
-        headCenter.dy + headRadius * 1.1,
-        tip.dx,
-        tip.dy,
-      )
-      ..quadraticBezierTo(
-        headCenter.dx + tailWidth * 0.25,
-        headCenter.dy + headRadius * 1.1,
-        rightAttach.dx,
-        rightAttach.dy,
-      )
-      ..close();
+    // Outer glow ring
+    final Paint outerGlow = Paint()
+      ..color = color.withValues(alpha: 0.3)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 15);
+    canvas.drawCircle(markerCenter, markerSize + 8, outerGlow);
 
-    // Combine head + tail by drawing tail then overlay head to keep perfect circle
-    // Shadow for the tail
-    canvas.drawShadow(tail, Colors.black.withValues(alpha: 0.35), 6, true);
+    // Inner glow ring
+    final Paint innerGlow = Paint()
+      ..color = color.withValues(alpha: 0.5)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
+    canvas.drawCircle(markerCenter, markerSize + 4, innerGlow);
 
-    // Gradient fill for head
-    final HSLColor hsl = HSLColor.fromColor(color);
-    final Color light = hsl.withLightness((hsl.lightness + 0.18).clamp(0.0, 1.0)).toColor();
-    final Color dark = hsl.withLightness((hsl.lightness - 0.10).clamp(0.0, 1.0)).toColor();
-    final Paint tailFill = Paint()..color = dark.withValues(alpha: 0.95);
-    final Paint headFill = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [light, dark],
-      ).createShader(Rect.fromCircle(center: headCenter, radius: headRadius));
+    // Main marker background with gradient
+    final Paint markerFill = Paint()
+      ..shader = RadialGradient(
+        colors: [
+          color.withValues(alpha: 0.9),
+          color.withValues(alpha: 0.7),
+          color.withValues(alpha: 0.4),
+        ],
+      ).createShader(Rect.fromCircle(center: markerCenter, radius: markerSize));
+    canvas.drawCircle(markerCenter, markerSize, markerFill);
 
-    // Stroke/border
-    final Paint border = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.0
-      ..color = Colors.white.withValues(alpha: 0.95);
+    // White border (removed for cleaner look)
+    // final Paint border = Paint()
+    //   ..style = PaintingStyle.stroke
+    //   ..strokeWidth = 2.0
+    //   ..color = Colors.white.withValues(alpha: 0.9);
+    // canvas.drawCircle(markerCenter, markerSize, border);
 
-    // Draw tail and head
-    canvas.drawPath(tail, tailFill);
-    canvas.drawCircle(headCenter, headRadius, headFill);
-    canvas.drawCircle(headCenter, headRadius, border);
+    // Inner white circle for icon background (removed for cleaner look)
+    // final Paint innerCircle = Paint()
+    //   ..color = Colors.white.withValues(alpha: 0.9);
+    // canvas.drawCircle(markerCenter, markerSize * 0.7, innerCircle);
 
-    // Inner white dot for precision
-    canvas.drawCircle(headCenter, headRadius * 0.18, Paint()..color = Colors.white.withValues(alpha: 0.95));
-
-    // Ground ellipse (subtle contact shadow)
-    final double ellipseW = headRadius * 2.0;
-    final double ellipseH = headRadius * 0.55;
-    final Rect ellipseRect = Rect.fromCenter(
-      center: Offset(center.dx, tip.dy + headRadius * 0.18),
-      width: ellipseW,
-      height: ellipseH,
+    // Draw emoji
+    final String emoji = customEmoji ?? _getDefaultEmoji();
+    final TextPainter emojiPainter = TextPainter(
+      text: TextSpan(
+        text: emoji,
+        style: TextStyle(
+          fontSize: markerSize * 1.2,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    
+    emojiPainter.paint(
+      canvas,
+      Offset(
+        markerCenter.dx - emojiPainter.width / 2,
+        markerCenter.dy - emojiPainter.height / 2,
+      ),
     );
-    final Paint ground = Paint()..color = Colors.black.withValues(alpha: 0.12);
-    canvas.drawOval(ellipseRect, ground);
 
-    // Label (two-line chip)
-    final double maxLabelWidth = size.width * 0.92;
+    // Pulsing ring effect (subtle)
+    final Paint pulseRing = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5
+      ..color = color.withValues(alpha: 0.4);
+    canvas.drawCircle(markerCenter, markerSize * 1.2, pulseRing);
+
+    // AR-style floating label
+    final double maxLabelWidth = size.width * 0.9;
     final TextPainter titlePainter = TextPainter(
       text: TextSpan(
         text: title,
         style: const TextStyle(
-          color: Colors.black87,
+          color: Colors.white,
           fontWeight: FontWeight.w700,
-          fontSize: 13,
+          fontSize: 12,
           letterSpacing: 0.2,
         ),
       ),
@@ -518,10 +1014,10 @@ class _MapPinPainter extends CustomPainter {
     final TextPainter subtitlePainter = TextPainter(
       text: TextSpan(
         text: subtitle,
-        style: const TextStyle(
-          color: Colors.black54,
+        style: TextStyle(
+          color: Colors.white.withValues(alpha: 0.9),
           fontWeight: FontWeight.w500,
-          fontSize: 11,
+          fontSize: 10,
           letterSpacing: 0.1,
         ),
       ),
@@ -530,49 +1026,66 @@ class _MapPinPainter extends CustomPainter {
       ellipsis: '…',
     )..layout(maxWidth: maxLabelWidth);
 
-    const double labelHPad = 10.0;
-    const double labelVPad = 7.0;
-    const double lineSpacing = 2.0;
+    const double labelHPad = 12.0;
+    const double labelVPad = 8.0;
+    const double lineSpacing = 3.0;
 
     final double contentWidth = math.max(titlePainter.width, subtitlePainter.width);
     final double contentHeight = titlePainter.height + lineSpacing + subtitlePainter.height;
 
-    final RRect chip = RRect.fromRectAndRadius(
+    // Label background with AR-style design
+    final RRect labelBg = RRect.fromRectAndRadius(
       Rect.fromCenter(
-        center: Offset(center.dx, ellipseRect.center.dy + ellipseRect.height / 2 + 16),
+        center: Offset(center.dx, markerCenter.dy + markerSize + 25),
         width: contentWidth + 2 * labelHPad,
         height: contentHeight + 2 * labelVPad,
       ),
-      const Radius.circular(12),
+      Radius.circular(16),
     );
 
-    // Drop shadow for the chip
-    final Paint chipShadow = Paint()
-      ..color = Colors.black.withValues(alpha: 0.18)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
+    // Label glow effect
+    final Paint labelGlow = Paint()
+      ..color = Colors.black.withValues(alpha: 0.4)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12);
     canvas.save();
-    canvas.translate(0, 1);
-    canvas.drawRRect(chip, chipShadow);
+    canvas.translate(0, 2);
+    canvas.drawRRect(labelBg, labelGlow);
     canvas.restore();
 
-    // Chip background
-    final Paint chipBg = Paint()..color = Colors.white.withValues(alpha: 0.92);
-    canvas.drawRRect(chip, chipBg);
+    // Label background with gradient
+    final Paint labelBgFill = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          Colors.black.withValues(alpha: 0.8),
+          Colors.black.withValues(alpha: 0.6),
+        ],
+      ).createShader(labelBg.outerRect);
+    canvas.drawRRect(labelBg, labelBgFill);
 
-    final double titleLeft = chip.center.dx - (titlePainter.width / 2);
-    final double subtitleLeft = chip.center.dx - (subtitlePainter.width / 2);
-    titlePainter.paint(canvas, Offset(titleLeft, chip.top + labelVPad));
+    // Label border
+    final Paint labelBorder = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0
+      ..color = color.withValues(alpha: 0.6);
+    canvas.drawRRect(labelBg, labelBorder);
+
+    // Draw text
+    final double titleLeft = labelBg.center.dx - (titlePainter.width / 2);
+    final double subtitleLeft = labelBg.center.dx - (subtitlePainter.width / 2);
+    titlePainter.paint(canvas, Offset(titleLeft, labelBg.top + labelVPad));
     subtitlePainter.paint(
       canvas,
       Offset(
         subtitleLeft,
-        chip.top + labelVPad + titlePainter.height + lineSpacing,
+        labelBg.top + labelVPad + titlePainter.height + lineSpacing,
       ),
     );
   }
 
   @override
   bool shouldRepaint(covariant _MapPinPainter oldDelegate) {
-    return oldDelegate.color != color || oldDelegate.title != title || oldDelegate.subtitle != subtitle;
+    return oldDelegate.color != color || oldDelegate.title != title || oldDelegate.subtitle != subtitle || oldDelegate.customEmoji != customEmoji;
   }
 }

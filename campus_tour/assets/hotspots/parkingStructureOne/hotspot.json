@@ -1,0 +1,32 @@
+{
+    "hotspotId": "parkingStructureOne",
+    "name": "Parking Structure 1",
+    "description": "Parking Structure One offers convenient parking for PSU students, faculty, and visitors.",
+    "location": {
+        "latitude": 45.510866,
+        "longitude": -122.683645,
+        "radius": 33.10 
+    },
+    "createdAt": "2025-08-14T12:00:00Z",
+    "updatedAt": "2025-08-14T12:00:00Z",
+
+    "status": "active",
+    "features": [
+        {
+            "featureId": "1",
+            "type": "photo",
+            "content": "Photo of a car",
+            "fileLocation": "photoOfBali.jpg",
+            "postedDate": "Aug 10, 2025",
+            "author": "Campus Tour Team"
+        },
+        {
+            "featureId": "2",
+            "type": "video",
+            "content": "Video of a cat",
+            "fileLocation": "videoOfBali.mov",
+            "postedDate": "Aug 10, 2025",
+            "author": "Campus Tour Team"
+        }
+    ]
+}
