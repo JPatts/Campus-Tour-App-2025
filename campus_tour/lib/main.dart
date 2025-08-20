@@ -7,6 +7,10 @@ import 'camera.dart'; // right-hand page
 import 'listview.dart'; // list of discovered locations
 import 'services/hotspot_service.dart';
 
+// PSU Color Pallet
+const psuGreen = 0xFF6D8D24;
+const electricGreen = 0xFFCFD82D;
+const forestGreen = 0xFF213921;
 
 final myService = HotspotService();
 
@@ -34,9 +38,9 @@ class MyApp extends StatelessWidget {
       title: 'Campus Tour App',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF213921)),
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF6D8D24)),
         appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF213921),
+          backgroundColor: Color(psuGreen),
           foregroundColor: Colors.white,
           elevation: 0,
         ),
@@ -196,7 +200,7 @@ class _HomeWithNavState extends State<HomeWithNav> {
 
       // Bottom navigation bar with 3 icons
       bottomNavigationBar: ColoredBox(
-        color: const Color(0xFF213921),
+        color: const Color(psuGreen),
         child: SafeArea(
           top: false,
           child: BottomNavigationBar(
