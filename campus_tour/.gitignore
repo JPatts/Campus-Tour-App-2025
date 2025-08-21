@@ -45,5 +45,5 @@ app.*.map.json
 /android/app/release
 
 # Emulator generated files
-**/generated_plugin*
-**/GeneratedPlugin*
+/campus_tour/**/flutter/generated_plugin*
+/campus_tour/**/flutter/GeneratedPlugin*
