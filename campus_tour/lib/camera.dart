@@ -647,9 +647,9 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
     final double remaining = (feet - thresholdFeet).clamp(0, double.infinity);
     if (remaining >= 5280) {
       final double miles = remaining / 5280.0;
-      return '${miles.toStringAsFixed(1)} miles left';
+      return '${miles.toStringAsFixed(1)} miles away';
     }
-    return '${remaining.toStringAsFixed(0)} ft left';
+    return '${remaining.toStringAsFixed(0)} ft away';
   }
 
   Future<void> _launchAppleMaps(Hotspot hotspot) async {

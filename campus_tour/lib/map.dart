@@ -834,9 +834,27 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
                 const SizedBox(height: 8),
                 Text('Zone radius: ${_formatDistance(hotspot.location.radius)}'),
                ] else if (_currentPosition != null && distance != null) ...[
-                const Text('Enter the zone to unlock the content'),
-                const SizedBox(height: 8),
-                Text('Remaining: ${_formatRemainingFeet(distance, hotspot.location.radius * 3.28084)}'),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.amber.withValues(alpha: 0.35), width: 1),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.lock_open_outlined, size: 18, color: Colors.amber),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _formatRemainingFeet(distance, hotspot.location.radius * 3.28084),
+                          style: const TextStyle(color: Colors.black87),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ],
           ),
@@ -954,9 +972,9 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
     final double remaining = (feet - thresholdFeet).clamp(0, double.infinity);
     if (remaining >= 5280) {
       final double miles = remaining / 5280.0;
-      return '${miles.toStringAsFixed(1)} miles left';
+      return '${miles.toStringAsFixed(1)} miles away';
     }
-    return '${remaining.toStringAsFixed(0)} ft left';
+    return '${remaining.toStringAsFixed(0)} ft away';
   }
 
   Set<Polygon> _createPolygons() {
