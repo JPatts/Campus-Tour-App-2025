@@ -65,10 +65,10 @@ class LocationList extends MyApp {
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: const Color(0xFF213921).withValues(alpha: 0.15),
+                      color: const Color(0xFF6d8d24).withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(Icons.place, color: Color(0xFF213921)),
+                    child: const Icon(Icons.place, color: Color(0xFF6d8d24)),
                   ),
                   children: [
                     ListTile(

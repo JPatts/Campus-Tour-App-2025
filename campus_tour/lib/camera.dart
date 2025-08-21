@@ -197,7 +197,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
     }
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light.copyWith(statusBarColor: const Color(0xFF213921)),
+      value: SystemUiOverlayStyle.light.copyWith(statusBarColor: const Color(0xFF6d8d24)),
       child: Stack(
         fit: StackFit.expand,
         children: [
@@ -227,7 +227,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
           right: 0,
           child: Container(
             height: MediaQuery.of(context).padding.top,
-            color: const Color(0xFF213921),
+            color: const Color(0xFF6d8d24),
           ),
         ),
 
@@ -721,7 +721,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFF213921),
+      backgroundColor: const Color(0xFF6d8d24),
       body: SafeArea(
         child: Center(
           child: Padding(
@@ -883,14 +883,14 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                         height: 20,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF213921)),
+                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF6d8d24)),
                         ),
                       )
                     : const Icon(Icons.refresh),
                   label: Text(_retrying ? 'Initializing...' : 'Try Again'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
-                    foregroundColor: const Color(0xFF213921),
+                    foregroundColor: const Color(0xFF6d8d24),
                     padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),

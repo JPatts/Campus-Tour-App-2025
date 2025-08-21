@@ -1184,7 +1184,7 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
 
     super.build(context);
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light.copyWith(statusBarColor: const Color(0xFF213921)),
+      value: SystemUiOverlayStyle.light.copyWith(statusBarColor: const Color(0xFF6d8d24)),
       child: Scaffold(
         body: Stack(
           children: [
@@ -1276,7 +1276,7 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
               right: 0,
               child: Container(
                 height: MediaQuery.of(context).padding.top,
-                color: const Color(0xFF213921),
+                color: const Color(0xFF6d8d24),
               ),
             ),
           ],
@@ -1411,7 +1411,7 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFF213921),
+      backgroundColor: const Color(0xFF6d8d24),
       body: SafeArea(
         child: Center(
           child: Padding(
@@ -1570,14 +1570,14 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
                         height: 20,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF213921)),
+                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF6d8d24)),
                         ),
                       )
                     : const Icon(Icons.refresh),
                   label: Text(_retrying ? 'Initializing...' : 'Try Again'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
-                    foregroundColor: const Color(0xFF213921),
+                    foregroundColor: const Color(0xFF6d8d24),
                     padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -1732,13 +1732,13 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            const Color(0xFF213921).withOpacity(0.1),
-            const Color(0xFF213921).withOpacity(0.05),
+            const Color(0xFF6d8d24).withOpacity(0.1),
+            const Color(0xFF6d8d24).withOpacity(0.05),
           ],
         ),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: const Color(0xFF213921).withOpacity(0.2),
+          color: const Color(0xFF6d8d24).withOpacity(0.2),
           width: 1,
         ),
       ),
@@ -1755,7 +1755,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
                 Text(
                   _formatDuration(_position),
                   style: const TextStyle(
-                    color: Color(0xFF213921),
+                    color: Color(0xFF6d8d24),
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
                   ),
@@ -1774,8 +1774,8 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
             // Enhanced progress bar
             SliderTheme(
               data: SliderTheme.of(context).copyWith(
-                activeTrackColor: const Color(0xFF213921),
-                thumbColor: const Color(0xFF213921),
+                activeTrackColor: const Color(0xFF6d8d24),
+                thumbColor: const Color(0xFF6d8d24),
                 inactiveTrackColor: Colors.grey[300],
                 trackHeight: 4,
                 thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
@@ -1808,7 +1808,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
                 icon: Icon(
                   Icons.replay_10,
                   color: _hasStartedPlaying && _duration > Duration.zero 
-                      ? const Color(0xFF213921) 
+                      ? const Color(0xFF6d8d24) 
                       : Colors.grey[400],
                   size: 28,
                 ),
@@ -1826,7 +1826,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
                   ),
                   child: Icon(
                     Icons.stop,
-                    color: _hasStartedPlaying ? const Color(0xFF213921) : Colors.grey[400],
+                    color: _hasStartedPlaying ? const Color(0xFF6d8d24) : Colors.grey[400],
                     size: 20,
                   ),
                 ),
@@ -1836,11 +1836,11 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
               // Main play/pause button
               Container(
                 decoration: BoxDecoration(
-                  color: const Color(0xFF213921),
+                  color: const Color(0xFF6d8d24),
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF213921).withOpacity(0.3),
+                      color: const Color(0xFF6d8d24).withOpacity(0.3),
                       blurRadius: 8,
                       offset: const Offset(0, 4),
                     ),
@@ -1877,7 +1877,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
                   ),
                   child: Icon(
                     Icons.replay,
-                    color: _hasStartedPlaying ? const Color(0xFF213921) : Colors.grey[400],
+                    color: _hasStartedPlaying ? const Color(0xFF6d8d24) : Colors.grey[400],
                     size: 20,
                   ),
                 ),
@@ -1890,7 +1890,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
                 icon: Icon(
                   Icons.forward_10,
                   color: _hasStartedPlaying && _duration > Duration.zero 
-                      ? const Color(0xFF213921) 
+                      ? const Color(0xFF6d8d24) 
                       : Colors.grey[400],
                   size: 28,
                 ),
@@ -1909,7 +1909,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
                   width: 16,
                   height: 16,
                   child: CircularProgressIndicator(
-                    color: const Color(0xFF213921),
+                    color: const Color(0xFF6d8d24),
                     strokeWidth: 2,
                   ),
                 ),
@@ -2158,7 +2158,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                                   _controller,
                                   allowScrubbing: true,
                                   colors: const VideoProgressColors(
-                                    playedColor: Color(0xFF213921),
+                                    playedColor: Color(0xFF6d8d24),
                                     bufferedColor: Colors.grey,
                                     backgroundColor: Colors.white24,
                                   ),
@@ -2213,7 +2213,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                                       icon: Container(
                                         padding: const EdgeInsets.all(8),
                                         decoration: const BoxDecoration(
-                                          color: Color(0xFF213921),
+                                          color: Color(0xFF6d8d24),
                                           shape: BoxShape.circle,
                                         ),
                                         child: Icon(
@@ -2276,7 +2276,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       CircularProgressIndicator(
-                        color: Color(0xFF213921),
+                        color: Color(0xFF6d8d24),
                       ),
                       SizedBox(height: 16),
                       Text(
