@@ -5,3 +5,5 @@ campus_tour/.dart_tool/
 campus_tour_backup/build/
 campus_tour_backup/.dart_tool/
 
+campus_tour/**/flutter/generated_plugin*
+campus_tour/**/flutter/GeneratedPlugin*
