@@ -1,12 +1,6 @@
 # Campus Tour App - Quick Start Guide
 ## For the Next Capstone Team
 
----
-
-## 🚀 Getting Started in 30 Minutes
-
-This guide will help you get the Campus Tour App running on your development machine quickly.
-
 ### Prerequisites Checklist
 - [ ] Flutter SDK installed (version 3.8.1+)
 - [ ] Android Studio or VS Code
@@ -87,24 +81,24 @@ lib/
 
 ---
 
-## 🎯 What You Should See
+## What You Should See
 
 ### Working Features
-- ✅ App launches without errors
-- ✅ Three-tab navigation works
-- ✅ Hotspots load and display
-- ✅ Admin mode activation works
-- ✅ Basic UI is functional
+- App launches without errors
+- Three-tab navigation works
+- Hotspots load and display
+- Admin mode activation works
+- Basic UI is functional
 
 ### Known Limitations (Don't Panic!)
-- ❌ GPS won't work in simulator
-- ❌ Camera won't work in simulator
-- ❌ Google Maps may show errors without API key
-- ❌ AR features need physical device
+- GPS won't work in simulator
+- Camera won't work in simulator
+- Google Maps may show errors without API key
+- AR features need physical device
 
 ---
 
-## 🔧 Common Issues & Solutions
+## Common Issues & Solutions
 
 ### "Flutter not found"
 ```bash
@@ -129,7 +123,7 @@ flutter pub get
 
 ---
 
-## 📱 Testing on Physical Device
+## Testing on Physical Device
 
 ### Android
 1. **Enable Developer Options** on your phone
@@ -145,7 +139,7 @@ flutter pub get
 
 ---
 
-## 🎓 Next Steps
+## Next Steps
 
 ### Immediate Actions
 1. **Read the full documentation** in `Campus_Tour_App_Documentation.md`
@@ -167,7 +161,7 @@ flutter pub get
 
 ---
 
-## 📚 Essential Resources
+## Essential Resources
 
 ### Documentation
 - **Full Documentation**: `Campus_Tour_App_Documentation.md`
@@ -185,7 +179,7 @@ flutter pub get
 
 ---
 
-## 🆘 Getting Help
+## Getting Help
 
 ### When You're Stuck
 1. **Check the documentation** first
@@ -200,7 +194,7 @@ flutter pub get
 
 ---
 
-## ✅ Success Checklist
+## Success Checklist
 
 After completing this guide, you should have:
 - [ ] App running on your machine
@@ -211,7 +205,7 @@ After completing this guide, you should have:
 
 ---
 
-## 🎉 Congratulations!
+## Congratulations!
 
 You've successfully set up the Campus Tour App! You're now ready to:
 - **Develop new features**

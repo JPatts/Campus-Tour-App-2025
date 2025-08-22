@@ -5,7 +5,7 @@ A self-guided tour application for Portland State University that combines GPS l
 
 ---
 
-## 📱 App Overview
+## App Overview
 
 The Campus Tour App allows users to explore PSU campus through:
 - **Interactive Map**: Real-time GPS tracking with hotspot markers
@@ -15,7 +15,7 @@ The Campus Tour App allows users to explore PSU campus through:
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### For New Teams
 1. **Read the [Quick Start Guide](Quick_Start_Guide.md)** - Get running in 30 minutes
@@ -37,7 +37,7 @@ flutter run
 
 ---
 
-## 📚 Documentation
+## Documentation
 
 | Document | Purpose | Audience |
 |----------|---------|----------|
@@ -48,7 +48,7 @@ flutter run
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 ### Technology Stack
 - **Framework**: Flutter (Dart)
@@ -70,21 +70,21 @@ campus_tour/
 
 ---
 
-## 🎯 Key Features
+## Key Features
 
 ### User Features
-- ✅ Real-time GPS location tracking
-- ✅ Interactive Google Maps integration
-- ✅ Augmented reality camera view
-- ✅ Multimedia content (photos, videos, audio)
-- ✅ Location-based content triggering
-- ✅ Offline content access
+- Real-time GPS location tracking
+- Interactive Google Maps integration
+- Augmented reality camera view
+- Multimedia content (photos, videos, audio)
+- Location-based content triggering
+- Offline content access
 
 ### Admin Features
-- ✅ Hidden admin mode (triple-tap Map tab, code: 4231)
-- ✅ Content management through Git
-- ✅ Hotspot creation and editing
-- ✅ Remote content updates
+- Hidden admin mode (triple-tap Map tab, code: 4231)
+- Content management through Git
+- Hotspot creation and editing
+- Remote content updates
 
 ---
 
@@ -108,7 +108,7 @@ campus_tour/
 
 ---
 
-## 🔧 Development
+## Development
 
 ### Prerequisites
 - Flutter SDK (version 3.8.1+)
@@ -128,7 +128,7 @@ campus_tour/
 
 ---
 
-## 📱 Platform Support
+## Platform Support
 
 - **Android**: API level 21+
 - **iOS**: iOS 12.0+
@@ -136,7 +136,7 @@ campus_tour/
 
 ---
 
-## 🗺️ Hotspot System
+## Hotspot System
 
 Hotspots are physical locations with associated digital content:
 
@@ -163,7 +163,7 @@ Hotspots are physical locations with associated digital content:
 
 ---
 
-## 🚀 Deployment
+## Deployment
 
 ### Android
 ```bash
@@ -182,7 +182,7 @@ flutter build ios --release
 
 ---
 
-## 🆘 Support
+## Support
 
 ### Getting Help
 1. **Check documentation** first
@@ -197,13 +197,13 @@ flutter build ios --release
 
 ---
 
-## 📄 License
+## License
 
 This project is open source and available under the MIT License.
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 For the next capstone team:
 1. **Fork the repository**
@@ -214,7 +214,7 @@ For the next capstone team:
 
 ---
 
-## 📞 Contact
+## Contact
 
 - **Repository Issues**: [GitHub Issues](https://github.com/JPatts/Campus-Tour-App-2025/issues)
 - **Previous Team Lead**: Jonah Pattison
