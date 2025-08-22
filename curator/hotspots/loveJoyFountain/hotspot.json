@@ -1,0 +1,33 @@
+{
+    "hotspotId": "loveJoyFountain",
+    "name": "Lovejoy Fountain",
+    "description": "This is the Lovejoy Fountain, a beautiful spot to relax and enjoy nature.",
+    "location": {
+        "latitude": 45.509280,
+        "longitude": -122.680032,
+        "radius": 100 
+    },
+    "createdOn": "2025-08-22",
+
+    "status": "active",
+    "features": [
+        {
+            "featureId": "1",
+            "type": "image",
+            "content": "Here is a photo of the sign at Lovejoy Fountain.",
+            "fileLocation": "IMG_1159.jpeg"
+        },
+        {
+            "featureId": "2",
+            "type": "video",
+            "content": "Here is a video of the Lovejoy Fountain.",
+            "fileLocation": "IMG_1160.MOV"
+        },
+        {
+            "featureId": "3",
+            "type": "image",
+            "content": "Here is a photo of some of the buildings overlooking the fountain",
+            "fileLocation": "IMG_1161.jpeg"
+        }
+    ]
+}

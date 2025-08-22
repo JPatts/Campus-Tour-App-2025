@@ -1,0 +1,57 @@
+{
+    "hotspotId": "park",
+    "name": "Park",
+    "description": "This is a beautiful park with lots of greenery and open space.",
+    "location": {
+        "latitude": 45.511348,
+        "longitude": -122.685470,
+        "radius": 100 
+    },
+    "createdOn": "2025-08-22",
+
+    "status": "active",
+    "features": [
+        {
+            "featureId": "1",
+            "type": "image",
+            "content": "Here is a photo of some of the wide open space at the park",
+            "fileLocation": "IMG_1188.jpeg"
+        },
+        {
+            "featureId": "2",
+            "type": "image",
+            "content": "here is a photo of the statue Farewell to Orpheus",
+            "fileLocation": "IMG_1189.jpeg"
+        },
+        {
+            "featureId": "3",
+            "type": "image",
+            "content": "Here is a photo of some of the stone chess boards at the park.",
+            "fileLocation": "IMG_1190.jpeg"
+        },
+        {
+            "featureId": "4",
+            "type": "image",
+            "content": "Here is another photo of some wide open spaces at the park",
+            "fileLocation": "IMG_1191.jpeg"
+        },
+        {
+            "featureId": "5",
+            "type": "video",
+            "content": "Here is a video of some of the trees in the park.",
+            "fileLocation": "IMG_1192.MOV"
+        },
+        {
+            "featureId": "6",
+            "type": "image",
+            "content": "Here is a photo of the Library at the park",
+            "fileLocation": "IMG_1195.jpeg"
+        },
+        {
+            "featureId": "7",
+            "type": "image",
+            "content": "Here is a photo of one of the art installations at the park",
+            "fileLocation": "IMG_1197.jpeg"
+        }
+    ]
+}
