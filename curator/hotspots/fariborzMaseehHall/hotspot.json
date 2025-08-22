@@ -1,0 +1,51 @@
+{
+    "hotspotId": "fariborzMaseehHall",
+    "name": "Fariborz Maseeh Hall",
+    "description": "This is the Fariborz Maseeh Hall, which includes student services, classrooms and study areas.",
+    "location": {
+        "latitude": 45.511156,
+        "longitude": -122.684643,
+        "radius": 100 
+    },
+    "createdOn": "2025-08-22",
+
+    "status": "active",
+    "features": [
+        {
+            "featureId": "1",
+            "type": "image",
+            "content": "Here is a photo of the front of Fariborz Maseeh Hall",
+            "fileLocation": "IMG_1199.jpeg"
+        },
+        {
+            "featureId": "2",
+            "type": "image",
+            "content": "Here is a photo of the student services center.",
+            "fileLocation": "IMG_1201.jpeg"
+        },
+        {
+            "featureId": "3",
+            "type": "image",
+            "content": "Here is a photo of some of the study areas in Fariborz Maseeh Hall.",
+            "fileLocation": "IMG_1202.jpeg"
+        },
+        {
+            "featureId": "4",
+            "type": "image",
+            "content": "Here is some of the artwork found in the building.",
+            "fileLocation": "IMG_1203.jpeg"
+        },
+        {
+            "featureId": "5",
+            "type": "image",
+            "content": "Here is a photo of the art museum found in the hall.",
+            "fileLocation": "IMG_1204.jpeg"
+        },
+        {
+            "featureId": "6",
+            "type": "image",
+            "content": "Here is a photo of the coffee shop found at the back entrance of the building",
+            "fileLocation": "IMG_1205.jpeg"
+        }
+    ]
+}

@@ -1,0 +1,45 @@
+{
+    "hotspotId": "centralPlaza",
+    "name": "Central Plaza",
+    "description": "This is the central plaza of the campus, it includes a bookstore, the recreation center and a coffee shop among other things.",
+    "location": {
+        "latitude": 45.511900,
+        "longitude": -122.681920,
+        "radius": 100 
+    },
+    "createdOn": "2025-08-22",
+
+    "status": "active",
+    "features": [
+        {
+            "featureId": "1",
+            "type": "image",
+            "content": "Here is a photo of the central plaza",
+            "fileLocation": "IMG_1167.jpeg"
+        },
+        {
+            "featureId": "2",
+            "type": "image",
+            "content": "Here's a  photo of the fountain.",
+            "fileLocation": "IMG_1171.jpeg"
+        },
+        {
+            "featureId": "3",
+            "type": "image",
+            "content": "Here is a photo of the bookstore.",
+            "fileLocation": "IMG_1172.jpeg"
+        },
+        {
+            "featureId": "4",
+            "type": "image",
+            "content": "Here is another photo of the central plaza.",
+            "fileLocation": "IMG_1174.jpeg"
+        },
+        {
+            "featureId": "5",
+            "type": "video",
+            "content": "Here is a video of the fountain in the plaza from one end to another.",
+            "fileLocation": "IMG_1173.MOV"
+        }
+    ]
+}

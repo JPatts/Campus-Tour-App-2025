@@ -1,0 +1,51 @@
+{
+    "hotspotId": "karlMillerCenter",
+    "name": "Karl Miller Center",
+    "description": "This is the Karl Miller Center, which includes student services, classrooms and study areas.",
+    "location": {
+        "latitude": 45.511521,
+        "longitude": -122.683400,
+        "radius": 100 
+    },
+    "createdOn": "2025-08-22",
+
+    "status": "active",
+    "features": [
+        {
+            "featureId": "1",
+            "type": "image",
+            "content": "Here is a photo of the front of Karl Miller Center",
+            "fileLocation": "IMG_1175.jpeg"
+        },
+        {
+            "featureId": "2",
+            "type": "image",
+            "content": "Here is a photo of the inside of the Karl Miller Center",
+            "fileLocation": "IMG_1177.jpeg"
+        },
+        {
+            "featureId": "3",
+            "type": "image",
+            "content": "Here is a photo Karl Millers bust, as well as a short description of his life",
+            "fileLocation": "IMG_1178.jpeg"
+        },
+        {
+            "featureId": "4",
+            "type": "image",
+            "content": "Here is a photo of some of the student services offered at the Karl Miller Center.",
+            "fileLocation": "IMG_1179.jpeg"
+        },
+        {
+            "featureId": "5",
+            "type": "image",
+            "content": "Here is a photo of the outside of the finance area.",
+            "fileLocation": "IMG_1180.jpeg"
+        },
+        {
+            "featureId": "6",
+            "type": "image",
+            "content": "Here is a short video showing the backside of the Karl Miller Center.",
+            "fileLocation": "IMG_1181.MOV"
+        }
+    ]
+}
