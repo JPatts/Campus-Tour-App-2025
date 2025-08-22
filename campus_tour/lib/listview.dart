@@ -47,7 +47,7 @@ class LocationList extends MyApp {
               itemCount: filteredHotspots.length,
               itemBuilder: (context, index) {
                 final hotspot = filteredHotspots[index];
-                return ExpansionTile(
+                return ListTile(
                   // contentPadding: const EdgeInsets.symmetric(
                   // horizontal: 16,
                   // vertical: 5,
@@ -70,13 +70,14 @@ class LocationList extends MyApp {
                     ),
                     child: const Icon(Icons.place, color: Color(0xFF6d8d24)),
                   ),
-                  children: [
-                    ListTile(
-                      // info goes here \/
-                      title: Text(hotspot.updatedAt),
-                      //leading: Image.file(myImage,),
-                    ),
-                  ],
+                  // ExpansionTile feature commented out
+                  // children: [
+                  //   ListTile(
+                  //     // info goes here \/
+                  //     title: Text(hotspot.updatedAt),
+                  //     //leading: Image.file(myImage,),
+                  //   ),
+                  // ],
                 );
               },
             ),

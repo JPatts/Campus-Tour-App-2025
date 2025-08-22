@@ -1,0 +1,32 @@
+{
+    "hotspotId": "shattuckHallAnnex",
+    "name": "Shattuck Hall Annex",
+    "description": "This is the Shattuck Hall Annex, home to various art installations.",
+    "location": {
+        "latitude": 45.510498,
+        "longitude": -122.684998,
+        "radius": 30
+    },
+    "createdOn": "2025-08-22",
+    "status": "active",
+    "features": [
+        {
+            "featureId": "1",
+            "type": "image",
+            "content": "The sign at Shattuck Hall Annex",
+            "fileLocation": "IMG_1206.jpeg"
+        },
+        {
+            "featureId": "2",
+            "type": "video",
+            "content": "Some of the construction at Shattuck Hall Annex",
+            "fileLocation": "IMG_1207.MOV"
+        },
+        {
+            "featureId": "3",
+            "type": "image",
+            "content": "Some of the new buildings next to the Hall",
+            "fileLocation": "IMG_1208.jpeg"
+        }
+    ]
+}

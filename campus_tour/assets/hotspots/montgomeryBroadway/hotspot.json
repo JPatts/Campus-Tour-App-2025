@@ -1,0 +1,44 @@
+{
+    "hotspotId": "montgomeryBroadway",
+    "name": "Montgomery & Broadway",
+    "description": "This is the intersection of Montgomery and Broadway, the main street that runs through PSU next to some of the main classrooms.",
+    "location": {
+        "latitude": 45.511998,
+        "longitude": -122.683587,
+        "radius": 30
+    },
+    "createdOn": "2025-08-22",
+    "status": "active",
+    "features": [
+        {
+            "featureId": "1",
+            "type": "image",
+            "content": "A photo from the middle of the street",
+            "fileLocation": "IMG_1182.jpeg"
+        },
+        {
+            "featureId": "2",
+            "type": "image",
+            "content": "The street signs",
+            "fileLocation": "IMG_1184.jpeg"
+        },
+        {
+            "featureId": "3",
+            "type": "image",
+            "content": "A photo beneath the skybridge that runs over the street",
+            "fileLocation": "IMG_1185.jpeg"
+        },
+        {
+            "featureId": "4",
+            "type": "image",
+            "content": "The entrance to Cramer Hall",
+            "fileLocation": "IMG_1186.jpeg"
+        },
+        {
+            "featureId": "5",
+            "type": "video",
+            "content": "A video beneath the skybridge that runs over the street",
+            "fileLocation": "IMG_1187.MOV"
+        }
+    ]
+}
