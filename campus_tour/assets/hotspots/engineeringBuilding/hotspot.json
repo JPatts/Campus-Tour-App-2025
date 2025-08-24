@@ -1,0 +1,38 @@
+{
+    "hotspotId": "engineeringBuilding",
+    "name": "Engineering Building",
+    "description": "This is the engineering building of the campus, it includes state-of-the-art laboratories, classrooms, and study areas.",
+    "location": {
+        "latitude": 45.509028,
+        "longitude": -122.681094,
+        "radius": 30
+    },
+    "createdOn": "2025-08-22",
+    "status": "active",
+    "features": [
+        {
+            "featureId": "1",
+            "type": "image",
+            "content": "The engineering building",
+            "fileLocation": "IMG_1162.jpeg"
+        },
+        {
+            "featureId": "2",
+            "type": "video",
+            "content": "The front of the engineering building",
+            "fileLocation": "IMG_1163.MOV"
+        },
+        {
+            "featureId": "3",
+            "type": "image",
+            "content": "The front of the engineering building",
+            "fileLocation": "IMG_1164.jpeg"
+        },
+        {
+            "featureId": "4",
+            "type": "image",
+            "content": "The engineering building in view of the sign",
+            "fileLocation": "IMG_1166.jpeg"
+        }
+    ]
+}

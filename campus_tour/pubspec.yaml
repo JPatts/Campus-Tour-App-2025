@@ -71,10 +71,6 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
     - assets/hotspots/
-    - assets/hotspots/parkingStructureOne/
-    - assets/hotspots/parkingStructureOne/Assets/
-    - assets/hotspots/psuLibrary/
-    - assets/hotspots/psuLibrary/Assets/
     - assets/hotspots/psuScottCenter/
     - assets/hotspots/psuScottCenter/Assets/
     - assets/hotspots/se117thAve/
@@ -83,6 +79,24 @@ flutter:
     - assets/hotspots/testHotspotSmall/Assets/
     - assets/hotspots/testHotspotBig/
     - assets/hotspots/testHotspotBig/Assets/
+    - assets/hotspots/centralPlaza/
+    - assets/hotspots/centralPlaza/Assets/
+    - assets/hotspots/engineeringBuilding/
+    - assets/hotspots/engineeringBuilding/Assets/
+    - assets/hotspots/exampleHotspot/
+    - assets/hotspots/exampleHotspot/Assets/
+    - assets/hotspots/fariborzMaseehHall/
+    - assets/hotspots/fariborzMaseehHall/Assets/
+    - assets/hotspots/karlMillerCenter/
+    - assets/hotspots/karlMillerCenter/Assets/
+    - assets/hotspots/loveJoyFountain/
+    - assets/hotspots/loveJoyFountain/Assets/
+    - assets/hotspots/montgomeryBroadway/
+    - assets/hotspots/montgomeryBroadway/Assets/
+    - assets/hotspots/park/
+    - assets/hotspots/park/Assets/
+    - assets/hotspots/shattuckHallAnnex/
+    - assets/hotspots/shattuckHallAnnex/Assets/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

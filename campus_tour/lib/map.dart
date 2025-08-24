@@ -554,6 +554,7 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
     
     switch (feature.type.toLowerCase()) {
       case 'photo':
+      case 'image':
         return _buildPhotoContent(assetPath);
       case 'video':
         return _buildVideoContent(assetPath, feature.content);
@@ -949,6 +950,7 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
   IconData _getIconForFeatureType(String type) {
     switch (type.toLowerCase()) {
       case 'photo':
+      case 'image':
         return Icons.photo;
       case 'video':
         return Icons.video_library;

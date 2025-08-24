@@ -37,14 +37,8 @@ class HotspotService {
   Future<List<Hotspot>> _loadHotspotsFromAssets() async {
     List<Hotspot> hotspots = [];
     
-    // List of hotspot directories to load
-    final List<String> hotspotDirectories = [
-      'parkingStructureOne',
-      'psuLibrary',
-      'psuScottCenter',
-      'testHotspotSmall',
-      'testHotspotBig',
-    ];
+    // Dynamically discover all hotspot directories
+    final List<String> hotspotDirectories = await _discoverHotspotDirectories();
     
     for (final directory in hotspotDirectories) {
       try {
@@ -61,6 +55,33 @@ class HotspotService {
     }
     
     return hotspots;
+  }
+
+  Future<List<String>> _discoverHotspotDirectories() async {
+    List<String> directories = [];
+    
+    // List all files in the assets/hotspots directory
+    final manifestContent = await rootBundle.loadString('AssetManifest.json');
+    final Map<String, dynamic> manifestMap = json.decode(manifestContent);
+    
+    // Find all hotspot.json files
+    final hotspotJsonFiles = manifestMap.keys
+        .where((String key) => key.startsWith('assets/hotspots/') && key.endsWith('/hotspot.json'))
+        .toList();
+    
+    // Extract directory names from the file paths
+    for (final filePath in hotspotJsonFiles) {
+      final parts = filePath.split('/');
+      if (parts.length >= 3) {
+        final directoryName = parts[2]; // assets/hotspots/[directoryName]/hotspot.json
+        if (!directories.contains(directoryName)) {
+          directories.add(directoryName);
+        }
+      }
+    }
+    
+    debugPrint('Discovered hotspot directories: $directories');
+    return directories;
   }
 
   // Get hotspots within a certain distance of a location
