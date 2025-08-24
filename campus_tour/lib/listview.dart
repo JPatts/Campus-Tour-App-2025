@@ -1,13 +1,11 @@
+import 'package:video_player/video_player.dart';
+
 import 'main.dart';
 import 'package:campus_tour/models/hotspot.dart';
 import 'package:campus_tour/services/hotspot_service.dart';
 import 'package:flutter/material.dart';
-import 'dart:io';
 
-
-var myImage = File(
-  '../assets/hotspots/exampleHotspot/Assets/photoOfBali.jpg',
-);
+var path = "";
 
 class LocationList extends MyApp {
   const LocationList({Key? key}) : super(key: key);
@@ -47,11 +45,12 @@ class LocationList extends MyApp {
               itemCount: filteredHotspots.length,
               itemBuilder: (context, index) {
                 final hotspot = filteredHotspots[index];
+                debugPrint(hotspot.features[0].content);
                 return ExpansionTile(
-                  // contentPadding: const EdgeInsets.symmetric(
-                  // horizontal: 16,
-                  // vertical: 5,
-                  // ),
+                  maintainState: true,
+                  shape: LinearBorder(),
+                  collapsedShape: LinearBorder(),
+                  tilePadding: EdgeInsets.symmetric(horizontal: 16),
                   title: Text(
                     hotspot.name,
                     style: const TextStyle(fontWeight: FontWeight.w600),
@@ -65,16 +64,47 @@ class LocationList extends MyApp {
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: const Color(0xFF6d8d24).withValues(alpha: 0.15),
+                      color: const Color(psuGreen).withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(Icons.place, color: Color(0xFF6d8d24)),
+                    child: const Icon(Icons.place, color: Color(psuGreen)),
                   ),
-                  children: [
-                    ListTile(
-                      // info goes here \/
-                      title: Text(hotspot.updatedAt),
-                      //leading: Image.file(myImage,),
+                  children: <Widget>[
+                    ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: hotspot.features.length,
+                      itemBuilder: (context, index) {
+                        final feature = hotspot.features[index];
+                        path = "";
+
+                        // check if the file location is a path or just a file name
+                        if (!path.contains(RegExp("/"))) {
+                          path =
+                              "assets/hotspots/${hotspot.hotspotId}/Assets/${feature.fileLocation}";
+                        } else {
+                          path = feature.fileLocation;
+                        }
+
+                        // build tile for each feature type
+                        if (feature.type == "photo") {
+                          return ListTile(
+                            title: Text(feature.content),
+                            subtitle: Image.asset(path),
+                          );
+                        } else if (feature.type == "video") {
+                          return ListTile(
+                            title: Text(feature.content),
+                            subtitle: VideoPlayerApp(),
+                          );
+                        } else {
+                          return ListTile(
+                            title: Text(feature.content[index]),
+                            subtitle: Center(
+                              child: Text("Error: invalid media type"),
+                            ),
+                          );
+                        }
+                      },
                     ),
                   ],
                 );
@@ -82,4 +112,121 @@ class LocationList extends MyApp {
             ),
     );
   }
+}
+
+class VideoPlayerApp extends StatefulWidget {
+  const VideoPlayerApp({super.key});
+
+  @override
+  // ignore: library_private_types_in_public_api
+  _VideoPlayerAppState createState() => _VideoPlayerAppState();
+}
+
+class _VideoPlayerAppState extends State<VideoPlayerApp> {
+  late VideoPlayerController _controller;
+  // late Future<void> _initializeVideoPlayerFuture;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Create and store the VideoPlayerController. The VideoPlayerController
+    // offers several different constructors to play videos from assets, files,
+    // or the internet.
+    _controller = VideoPlayerController.asset(path);
+
+    // Initialize the controller and store the Future for later use.
+    // _initializeVideoPlayerFuture = _controller.initialize();
+    _controller.initialize();
+
+    // Use the controller to loop the video.
+    _controller.setLooping(true);
+  }
+
+  @override
+  void dispose() {
+    // Ensure disposing of the VideoPlayerController to free up resources.
+    _controller.dispose();
+
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 300,
+      child: Scaffold(
+      body: Center(child: AspectRatio(
+        aspectRatio: _controller.value.aspectRatio,
+        child: VideoPlayer(_controller),
+      )
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          // Wrap the play or pause in a call to `setState`. This ensures the
+          // correct icon is shown.
+          setState(() {
+            // If the video is playing, pause it.
+            if (_controller.value.isPlaying) {
+              _controller.pause();
+            } else {
+              // If the video is paused, play it.
+              _controller.play();
+            }
+          });
+        },
+        // Display the correct icon depending on the state of the player.
+        child: Icon(
+          _controller.value.isPlaying ? Icons.pause : Icons.play_arrow,
+        ),
+      ),
+    )
+    );
+  }
+
+  // @override
+  // Widget build(BuildContext context) {
+  //   return Scaffold(
+  //     // Use a FutureBuilder to display a loading spinner while waiting for the
+  //     // VideoPlayerController to finish initializing.
+  //     body: Center(child: FutureBuilder(
+  //       future: _initializeVideoPlayerFuture,
+  //       builder: (context, snapshot) {
+  //         if (snapshot.connectionState == ConnectionState.done) {
+  //           // If the VideoPlayerController has finished initialization, use
+  //           // the data it provides to limit the aspect ratio of the video.
+  //           return AspectRatio(
+  //             aspectRatio: _controller.value.aspectRatio,
+  //             // Use the VideoPlayer widget to display the video.
+  //             child: VideoPlayer(_controller),
+  //           );
+  //         } else {
+  //           // If the VideoPlayerController is still initializing, show a
+  //           // loading spinner.
+  //           return const Center(child: CircularProgressIndicator());
+  //         }
+  //       },
+  //     )
+  //     ),
+  //     floatingActionButton: FloatingActionButton(
+  //       onPressed: () {
+  //         // Wrap the play or pause in a call to `setState`. This ensures the
+  //         // correct icon is shown.
+  //         setState(() {
+  //           // If the video is playing, pause it.
+  //           if (_controller.value.isPlaying) {
+  //             _controller.pause();
+  //           } else {
+  //             // If the video is paused, play it.
+  //             _controller.play();
+  //           }
+  //         });
+  //       },
+  //       // Display the correct icon depending on the state of the player.
+  //       child: Icon(
+  //         _controller.value.isPlaying ? Icons.pause : Icons.play_arrow,
+  //       ),
+  //     ),
+  //   );
+  //}
 }
