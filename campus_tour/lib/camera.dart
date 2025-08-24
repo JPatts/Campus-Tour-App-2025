@@ -7,6 +7,7 @@ import 'package:camera/camera.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter_compass/flutter_compass.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'main.dart';
 import 'models/hotspot.dart';
 import 'services/hotspot_service.dart';
 import 'package:vector_math/vector_math.dart' as vmath;
@@ -197,7 +198,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
     }
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light.copyWith(statusBarColor: const Color(0xFF6d8d24)),
+      value: SystemUiOverlayStyle.light.copyWith(statusBarColor: const Color(psuGreen)),
       child: Stack(
         fit: StackFit.expand,
         children: [
@@ -227,7 +228,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
           right: 0,
           child: Container(
             height: MediaQuery.of(context).padding.top,
-            color: const Color(0xFF6d8d24),
+            color: const Color(psuGreen),
           ),
         ),
 
@@ -721,7 +722,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFF6d8d24),
+      backgroundColor: const Color(psuGreen),
       body: SafeArea(
         child: Center(
           child: Padding(
@@ -883,14 +884,14 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                         height: 20,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF6d8d24)),
+                          valueColor: AlwaysStoppedAnimation<Color>(Color(psuGreen)),
                         ),
                       )
                     : const Icon(Icons.refresh),
                   label: Text(_retrying ? 'Initializing...' : 'Try Again'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
-                    foregroundColor: const Color(0xFF6d8d24),
+                    foregroundColor: const Color(psuGreen),
                     padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),

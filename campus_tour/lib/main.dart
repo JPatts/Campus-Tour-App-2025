@@ -10,7 +10,7 @@ import 'services/hotspot_service.dart';
 // PSU Color Pallet
 const psuGreen = 0xFF6D8D24;
 const electricGreen = 0xFFCFD82D;
-const forestGreen = 0xFF6d8d24;
+const forestGreen = 0xFF213921;
 
 final myService = HotspotService();
 
@@ -43,7 +43,7 @@ class MyApp extends StatelessWidget {
       title: 'Campus Tour App',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF6D8D24)),
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(psuGreen)),
         appBarTheme: const AppBarTheme(
           backgroundColor: Color(psuGreen),
           foregroundColor: Colors.white,
