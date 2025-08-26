@@ -5,6 +5,8 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
 import 'dart:async';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 import 'dart:io' show Platform;
 import 'dart:math' as math;
 import 'models/hotspot.dart';
@@ -13,6 +15,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:video_player/video_player.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:vector_math/vector_math_64.dart' show Matrix4;
+import 'utils/emoji_helper.dart';
 
 class MapScreen extends StatefulWidget {
   final bool adminModeEnabled;
@@ -173,6 +176,7 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
   String? _currentlyShownSnackForHotspotId;
   MapType _mapType = MapType.normal;
   CameraPosition? _lastCameraMove;
+  final Map<String, BitmapDescriptor> _emojiMarkerCache = {};
 
   // Portland State University coordinates
   static const CameraPosition _psuLocation = CameraPosition(
@@ -307,9 +311,55 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
       for (final hs in hotspots) {
         _wasInsideHotspot.putIfAbsent(hs.hotspotId, () => false);
       }
+      // Prepare emoji marker icons for all hotspots (lazy generation also happens on demand)
+      await _prepareEmojiMarkers(hotspots);
     } catch (e) {
       debugPrint('Error loading hotspots: $e');
     }
+  }
+
+  Future<void> _prepareEmojiMarkers(List<Hotspot> hotspots) async {
+    final Set<String> emojis = hotspots
+        .where((hs) => hs.status == 'active')
+        .map((hs) => EmojiHelper.emojiForName(hs.name))
+        .toSet();
+
+    for (final emoji in emojis) {
+      const double scale = 1.0;
+      final String key = _emojiCacheKey(emoji, scale);
+      if (_emojiMarkerCache.containsKey(key)) continue;
+      try {
+        final icon = await _createMarkerFromEmoji(emoji, scale: scale);
+        _emojiMarkerCache[key] = icon;
+      } catch (e) {
+        debugPrint('Failed to create marker for $emoji: $e');
+      }
+    }
+    if (mounted) setState(() {});
+  }
+
+  String _emojiCacheKey(String emoji, double scale) => '$emoji-$scale';
+
+  Future<BitmapDescriptor> _createMarkerFromEmoji(String emoji, {double scale = 1.0}) async {
+    final double size = 96.0 * scale; // px
+    final ui.PictureRecorder recorder = ui.PictureRecorder();
+    final Canvas canvas = Canvas(recorder);
+
+    // Transparent background; draw only the emoji
+    final Offset center = Offset(size / 2, size / 2);
+
+    final TextPainter tp = TextPainter(
+      text: TextSpan(
+        text: emoji,
+        style: TextStyle(fontSize: size * 0.5833),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    tp.paint(canvas, Offset(center.dx - tp.width / 2, center.dy - tp.height / 2));
+
+    final ui.Image image = await recorder.endRecording().toImage(size.toInt(), size.toInt());
+    final ByteData? bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+    return BitmapDescriptor.fromBytes(bytes!.buffer.asUint8List());
   }
 
   Future<void> _requestLocationPermission() async {
@@ -387,10 +437,38 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
   }
 
   Set<Marker> _createMarkers() {
-    // Remove custom user marker to avoid confusion with built-in blue dot
-    // Hotspots are displayed as circles only for a cleaner look
-    return <Marker>{};
+    final markers = <Marker>{};
+    for (final hs in _hotspots) {
+      if (hs.status != 'active') continue;
+      final emoji = EmojiHelper.emojiForName(hs.name);
+      final label = EmojiHelper.labelForName(hs.name);
+      // Match color + transparency with hotspot state
+      bool isWithinRadius = widget.adminModeEnabled;
+      if (!widget.adminModeEnabled && _currentPosition != null) {
+        isWithinRadius = _hotspotService.isUserInHotspot(
+          hs,
+          _currentPosition!.latitude,
+          _currentPosition!.longitude,
+        );
+      }
+      const double scale = 1.0;
+      final String cacheKey = _emojiCacheKey(emoji, scale);
+      final BitmapDescriptor? icon = _emojiMarkerCache[cacheKey];
+      markers.add(
+        Marker(
+          markerId: MarkerId('hs_${hs.hotspotId}'),
+          position: LatLng(hs.location.latitude, hs.location.longitude),
+          icon: icon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+          anchor: const Offset(0.5, 0.5),
+          infoWindow: const InfoWindow(), // no bubble; tap behavior matches hotspot
+          onTap: () => _onHotspotTapped(hs),
+        ),
+      );
+    }
+    return markers;
   }
+
+  // _getHotspotColor already provides the same transparency used by circles
 
   void _onHotspotTapped(Hotspot hotspot) {
     // Check if user is within hotspot radius or testing mode is enabled
@@ -1070,6 +1148,32 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
             fillColor: _getHotspotColor(isWithinRadius).withValues(alpha: 0.25), // Extremely transparent highlight
           ),
         );
+
+        // Add a visible ring in any non-standard map mode
+        if (_mapType == MapType.satellite || _mapType == MapType.hybrid) {
+          final Color ringColor = isWithinRadius
+              ? const Color(0xFF1B5E20) // dark green when inside
+              : Colors.orange; // orange when outside
+
+          // Draw the ring immediately against the light fill edge by
+          // placing the stroke slightly inside the main radius to avoid
+          // anti-alias gaps that can look like a white border.
+          final double ringStroke = 2.0; // thinner border
+          final double ringRadius = (hotspot.location.radius - ringStroke * 0.5)
+              .clamp(1.0, hotspot.location.radius)
+              .toDouble();
+
+          circles.add(
+            Circle(
+              circleId: CircleId('${hotspot.hotspotId}_ring'),
+              center: LatLng(hotspot.location.latitude, hotspot.location.longitude),
+              radius: ringRadius,
+              strokeColor: ringColor,
+              strokeWidth: ringStroke.round(),
+              fillColor: Colors.transparent,
+            ),
+          );
+        }
       }
     }
 
@@ -1146,17 +1250,100 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
     // Avoid showing multiple at once; replace any current
     _currentlyShownSnackForHotspotId = hotspot.hotspotId;
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    final String emoji = EmojiHelper.emojiForName(hotspot.name);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('You have entered "${hotspot.name}"'),
-        action: SnackBarAction(
-          label: 'Open',
-          onPressed: () {
-            _showHotspotContent(hotspot);
-          },
-        ),
-        duration: const Duration(seconds: 4),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+        padding: EdgeInsets.zero,
         behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 5),
+        content: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                const Color(0xFF6d8d24).withOpacity(0.95),
+                const Color(0xFF6d8d24).withOpacity(0.75),
+              ],
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF6d8d24).withOpacity(0.35),
+                blurRadius: 18,
+                spreadRadius: 2,
+                offset: const Offset(0, 6),
+              ),
+            ],
+            border: Border.all(color: Colors.white.withOpacity(0.08), width: 1),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withOpacity(0.15),
+                  border: Border.all(color: Colors.white.withOpacity(0.25), width: 1),
+                ),
+                child: Center(
+                  child: Text(
+                    emoji,
+                    style: const TextStyle(fontSize: 24),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'You entered',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      hotspot.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.1,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              TextButton(
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                onPressed: () => _showHotspotContent(hotspot),
+                child: const Text(
+                  'Open',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -1227,45 +1414,26 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
                 }
               },
             ),
-            // Map type toggle button (Standard / Satellite / Hybrid / Terrain)
+            // Map type toggle button (round), positioned above the My Location button
             Positioned(
-              top: MediaQuery.of(context).padding.top + 12,
-              left: 12,
+              right: 12,
+              bottom: 80,
               child: Material(
                 color: Colors.white,
-                elevation: 2,
-                borderRadius: BorderRadius.circular(10),
-                child: PopupMenuButton<MapType>(
-                  onSelected: (t) => setState(() {
-                    _mapType = t;
-                    MapScreen.lastMapType = t;
-                  }),
-                  itemBuilder: (ctx) => const [
-                    PopupMenuItem(value: MapType.normal, child: Text('Standard')),
-                    PopupMenuItem(value: MapType.satellite, child: Text('Satellite')),
-                    PopupMenuItem(value: MapType.hybrid, child: Text('Hybrid')),
-                    PopupMenuItem(value: MapType.terrain, child: Text('Terrain')),
-                  ],
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.layers, size: 18, color: Colors.black87),
-                        const SizedBox(width: 6),
-                        Text(
-                          _mapType == MapType.normal
-                              ? 'Standard'
-                              : _mapType == MapType.satellite
-                                  ? 'Satellite'
-                                  : _mapType == MapType.hybrid
-                                      ? 'Hybrid'
-                                      : 'Terrain',
-                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                        ),
-                        const SizedBox(width: 2),
-                        const Icon(Icons.arrow_drop_down, size: 18),
-                      ],
+                elevation: 3,
+                shape: const CircleBorder(),
+                child: Tooltip(
+                  message: 'Tap to cycle map mode, long-press to choose',
+                  child: InkWell(
+                    customBorder: const CircleBorder(),
+                    onTap: _cycleMapType,
+                    onLongPress: () => _openMapTypeMenu(context),
+                    child: SizedBox(
+                      width: 56,
+                      height: 56,
+                      child: Center(
+                        child: Icon(_getMapTypeIcon(_mapType), size: 24, color: Colors.black87),
+                      ),
                     ),
                   ),
                 ),
@@ -1301,6 +1469,91 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
         ? Colors.green.withValues(alpha: 0.06)  // Extremely transparent green
         : Colors.orange.withValues(alpha: 0.06); // Extremely transparent orange
     }
+  }
+
+  // Robust map type handling: label, icon, cycling, and chooser
+  String _mapTypeLabel(MapType t) {
+    switch (t) {
+      case MapType.normal:
+        return 'Standard';
+      case MapType.satellite:
+        return 'Satellite';
+      case MapType.hybrid:
+        return 'Hybrid';
+      case MapType.terrain:
+        return 'Terrain';
+      default:
+        return 'Standard';
+    }
+  }
+
+  IconData _getMapTypeIcon(MapType t) {
+    switch (t) {
+      case MapType.normal:
+        return Icons.layers;
+      case MapType.satellite:
+        return Icons.satellite_alt_outlined;
+      case MapType.hybrid:
+        return Icons.layers_outlined;
+      case MapType.terrain:
+        return Icons.terrain;
+      default:
+        return Icons.layers;
+    }
+  }
+
+  void _cycleMapType() {
+    final MapType next = _mapType == MapType.normal
+        ? MapType.satellite
+        : _mapType == MapType.satellite
+            ? MapType.hybrid
+            : _mapType == MapType.hybrid
+                ? MapType.terrain
+                : MapType.normal;
+    setState(() {
+      _mapType = next;
+      MapScreen.lastMapType = next;
+    });
+  }
+
+  Future<void> _openMapTypeMenu(BuildContext context) async {
+    final MapType? chosen = await showModalBottomSheet<MapType>(
+      context: context,
+      showDragHandle: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildMapTypeTile(MapType.normal),
+              _buildMapTypeTile(MapType.satellite),
+              _buildMapTypeTile(MapType.hybrid),
+              _buildMapTypeTile(MapType.terrain),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+    if (chosen != null) {
+      setState(() {
+        _mapType = chosen;
+        MapScreen.lastMapType = chosen;
+      });
+    }
+  }
+
+  Widget _buildMapTypeTile(MapType type) {
+    final bool selected = _mapType == type;
+    return ListTile(
+      leading: Icon(_getMapTypeIcon(type), color: Colors.black87),
+      title: Text(_mapTypeLabel(type)),
+      trailing: selected ? const Icon(Icons.check, color: Color(0xFF6d8d24)) : null,
+      onTap: () => Navigator.of(context).pop(type),
+    );
   }
 
   Timer? _boundaryTimer;
@@ -1413,8 +1666,19 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFF6d8d24),
-      body: SafeArea(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      body: Stack(
+        children: [
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              height: MediaQuery.of(context).padding.top,
+              color: const Color(0xFF6d8d24),
+            ),
+          ),
+          SafeArea(
         child: Center(
           child: Padding(
             padding: const EdgeInsets.all(32.0),
@@ -1425,10 +1689,10 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
                 Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: iconColor.withValues(alpha: 0.1),
+                    color: iconColor.withValues(alpha: 0.12),
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: iconColor.withValues(alpha: 0.3),
+                      color: iconColor.withValues(alpha: 0.25),
                       width: 2,
                     ),
                   ),
@@ -1444,7 +1708,7 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
                 Text(
                   title,
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: Colors.black,
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
                     letterSpacing: 0.5,
@@ -1457,7 +1721,7 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
                 Text(
                   message,
                   style: const TextStyle(
-                    color: Colors.white70,
+                    color: Colors.black87,
                     fontSize: 16,
                     height: 1.5,
                   ),
@@ -1469,10 +1733,10 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.1),
+                    color: Colors.black.withValues(alpha: 0.035),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.2),
+                      color: Colors.black.withValues(alpha: 0.06),
                       width: 1,
                     ),
                   ),
@@ -1482,7 +1746,7 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
                       const Text(
                         'How to fix:',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: Colors.black,
                           fontSize: 18,
                           fontWeight: FontWeight.w600,
                         ),
@@ -1500,14 +1764,14 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
                                 width: 24,
                                 height: 24,
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.2),
+                                  color: Colors.black.withValues(alpha: 0.06),
                                   shape: BoxShape.circle,
                                 ),
                                 child: Center(
                                   child: Text(
                                     '${index + 1}',
                                     style: const TextStyle(
-                                      color: Colors.white,
+                                      color: Colors.black,
                                       fontSize: 12,
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -1519,7 +1783,7 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
                                 child: Text(
                                   step,
                                   style: const TextStyle(
-                                    color: Colors.white70,
+                                    color: Colors.black87,
                                     fontSize: 14,
                                     height: 1.4,
                                   ),
@@ -1578,7 +1842,7 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
                     : const Icon(Icons.refresh),
                   label: Text(_retrying ? 'Initializing...' : 'Try Again'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
+                    backgroundColor: Theme.of(context).scaffoldBackgroundColor,
                     foregroundColor: const Color(0xFF6d8d24),
                     padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
                     shape: RoundedRectangleBorder(
@@ -1590,6 +1854,8 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
             ),
           ),
         ),
+        ),
+        ],
       ),
     );
   }

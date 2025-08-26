@@ -3,6 +3,7 @@ import 'package:campus_tour/models/hotspot.dart';
 import 'package:campus_tour/services/hotspot_service.dart';
 import 'package:flutter/material.dart';
 import 'dart:io';
+import 'utils/emoji_helper.dart';
 
 
 var myImage = File(
@@ -42,42 +43,60 @@ class LocationList extends MyApp {
       body: filteredHotspots.isEmpty
           ? const Center(child: Text('No hotspots available'))
           : ListView.separated(
-              padding: const EdgeInsets.only(top: 6, bottom: 6),
-              separatorBuilder: (context, index) => const Divider(height: 0),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              separatorBuilder: (context, index) => const SizedBox(height: 8),
               itemCount: filteredHotspots.length,
               itemBuilder: (context, index) {
                 final hotspot = filteredHotspots[index];
-                return ListTile(
-                  // contentPadding: const EdgeInsets.symmetric(
-                  // horizontal: 16,
-                  // vertical: 5,
-                  // ),
-                  title: Text(
-                    hotspot.name,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
+                return Card(
+                  elevation: 2,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
                   ),
-                  subtitle: Text(
-                    hotspot.description,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  leading: Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF6d8d24).withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(10),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF6d8d24).withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Center(
+                            child: Text(
+                              EmojiHelper.emojiForName(hotspot.name),
+                              style: const TextStyle(fontSize: 24),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                hotspot.name,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                hotspot.description,
+                                style: TextStyle(
+                                  color: Colors.grey[600],
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                    child: const Icon(Icons.place, color: Color(0xFF6d8d24)),
                   ),
-                  // ExpansionTile feature commented out
-                  // children: [
-                  //   ListTile(
-                  //     // info goes here \/
-                  //     title: Text(hotspot.updatedAt),
-                  //     //leading: Image.file(myImage,),
-                  //   ),
-                  // ],
                 );
               },
             ),

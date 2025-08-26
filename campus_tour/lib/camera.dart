@@ -10,6 +10,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'models/hotspot.dart';
 import 'services/hotspot_service.dart';
 import 'package:vector_math/vector_math.dart' as vmath;
+import 'utils/emoji_helper.dart';
 
 class CameraScreen extends StatefulWidget {
   const CameraScreen({Key? key}) : super(key: key);
@@ -187,6 +188,16 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
     return Offset(x, y);
   }
 
+  // Build initials from a hotspot name (e.g., "Central Plaza" -> "CP")
+  String _getInitials(String name) {
+    return EmojiHelper.labelForName(name);
+  }
+
+  // Choose an emoji based on the full hotspot name so icon selection remains accurate
+  String _emojiForName(String name) {
+    return EmojiHelper.emojiForName(name);
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_error.isNotEmpty) {
@@ -267,7 +278,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                 final double fovHalf = 32.5; // half of 65
                 final double visibility = (1 - (angleDiff.abs() / (fovHalf * 1.2))).clamp(0.0, 1.0);
 
-                // Marker footprint and size
+                // Marker footprint and size (keep marker size; we'll scale label content separately)
                 final double baseSize = 140;
                 final double scale = (1.0 - (distanceM / 305)).clamp(0.25, 1.0);
                 final double diameter = baseSize * scale;
@@ -290,15 +301,15 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                           child: GestureDetector(
                              behavior: HitTestBehavior.opaque,
                             onTap: () => _showHotspotSheet(hs, distanceM),
-                                child: CustomPaint(
-                                  painter: _MapPinPainter(
-                                    color: Theme.of(context).colorScheme.primary,
-                                    title: hs.name,
-                                    subtitle: _formatRemainingFeet(
-                                      distanceM,
-                                      hs.location.radius * 3.28084, // threshold in feet, per-hotspot
-                                    ),
+                                child: _PulsingMapPin(
+                                  color: Theme.of(context).colorScheme.primary,
+                                  title: _getInitials(hs.name),
+                                  subtitle: _formatRemainingFeet(
+                                    distanceM,
+                                    hs.location.radius * 3.28084, // threshold in feet, per-hotspot
                                   ),
+                                  customEmoji: _emojiForName(hs.name),
+                                  labelScale: scale,
                                 ),
                           ),
                       ),
@@ -310,100 +321,20 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
               // Show helpful messages when no hotspots are visible
               if (!hasVisibleHotspots) {
                 if (!hasNearbyHotspots) {
-                  // No nearby hotspots - AR-style indicator
+                  // No nearby hotspots - show centered pulsing indicator with explore icon (tappable)
                   widgets.add(
-                    Positioned(
-                      top: size.height * 0.4,
-                      left: 0,
-                      right: 0,
+                    Positioned.fill(
                       child: Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            // Floating AR-style location indicator
-                            Container(
-                              width: 80,
-                              height: 80,
-                              decoration: BoxDecoration(
-                                gradient: RadialGradient(
-                                  colors: [
-                                    Colors.red.withValues(alpha: 0.8),
-                                    Colors.red.withValues(alpha: 0.3),
-                                    Colors.red.withValues(alpha: 0.1),
-                                  ],
-                                ),
-                                shape: BoxShape.circle,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.red.withValues(alpha: 0.4),
-                                    blurRadius: 20,
-                                    spreadRadius: 5,
-                                  ),
-                                ],
-                              ),
-                              child: Icon(
-                                Icons.location_off_rounded,
-                                color: Colors.white,
-                                size: 50,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                                                          // Floating text with AR-style glow
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                                decoration: BoxDecoration(
-                                  color: Colors.black.withValues(alpha: 0.6),
-                                  borderRadius: BorderRadius.circular(25),
-                                  border: Border.all(
-                                    color: Colors.green.withValues(alpha: 0.6),
-                                    width: 1,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.green.withValues(alpha: 0.3),
-                                      blurRadius: 10,
-                                      spreadRadius: 2,
-                                    ),
-                                  ],
-                                ),
-                              child: Text(
-                                'No locations nearby',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w600,
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            // Suggestion text with AR-style design
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: Colors.black.withValues(alpha: 0.4),
-                                borderRadius: BorderRadius.circular(15),
-                                border: Border.all(
-                                  color: Colors.white.withValues(alpha: 0.3),
-                                  width: 0.5,
-                                ),
-                              ),
-                              child: Text(
-                                'Walk around campus to discover AR hotspots',
-                                style: TextStyle(
-                                  color: Colors.white.withValues(alpha: 0.9),
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                          ],
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: _showNoHotspotsSheet,
+                          child: const _PulsingArrow(icon: Icons.explore_outlined),
                         ),
                       ),
                     ),
                   );
                 } else {
-                  // Has nearby hotspots but not in view - show directional arrows
+                  // Has nearby hotspots but not in view - show only animated directional arrow (no text)
                   // Find the nearest hotspot to determine direction
                   Hotspot? nearestHotspot;
                   double nearestDistance = double.infinity;
@@ -424,117 +355,27 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                   if (nearestHotspot != null) {
                     final double targetBearing = _bearingTo(nearestHotspot);
                     final double angleDiff = (targetBearing - _headingDegrees + 540) % 360 - 180; // [-180,180]
-                    
+
                     // Determine which arrow to show based on angle difference
                     IconData arrowIcon;
-                    String directionText;
-                    
                     if (angleDiff.abs() < 45) {
-                      // Hotspot is roughly in front, show up arrow
-                      arrowIcon = Icons.keyboard_arrow_up;
-                      directionText = 'Look up';
+                      arrowIcon = Icons.keyboard_arrow_up; // forward
                     } else if (angleDiff > 45 && angleDiff < 135) {
-                      // Hotspot is to the right, show right arrow
-                      arrowIcon = Icons.keyboard_arrow_right;
-                      directionText = 'Turn right';
+                      arrowIcon = Icons.keyboard_arrow_right; // right
                     } else if (angleDiff < -45 && angleDiff > -135) {
-                      // Hotspot is to the left, show left arrow
-                      arrowIcon = Icons.keyboard_arrow_left;
-                      directionText = 'Turn left';
+                      arrowIcon = Icons.keyboard_arrow_left; // left
                     } else {
-                      // Hotspot is behind, show down arrow
-                      arrowIcon = Icons.keyboard_arrow_down;
-                      directionText = 'Turn around';
+                      arrowIcon = Icons.keyboard_arrow_down; // behind
                     }
-                    
-                    // AR-style directional indicator
+
+                    // Animated pulsing arrow indicator without any text
                     widgets.add(
-                      Positioned(
-                        top: size.height * 0.4,
-                        left: 0,
-                        right: 0,
+                      Positioned.fill(
                         child: Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              // Floating AR-style arrow indicator
-                              Container(
-                                width: 80,
-                                height: 80,
-                                decoration: BoxDecoration(
-                                  gradient: RadialGradient(
-                                    colors: [
-                                      Colors.green.withValues(alpha: 0.8),
-                                      Colors.green.withValues(alpha: 0.3),
-                                      Colors.green.withValues(alpha: 0.1),
-                                    ],
-                                  ),
-                                  shape: BoxShape.circle,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.green.withValues(alpha: 0.4),
-                                      blurRadius: 20,
-                                      spreadRadius: 5,
-                                    ),
-                                  ],
-                                ),
-                                child: Icon(
-                                  arrowIcon,
-                                  color: Colors.white,
-                                  size: 50,
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              // Floating text with AR-style glow
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                                decoration: BoxDecoration(
-                                  color: Colors.black.withValues(alpha: 0.6),
-                                  borderRadius: BorderRadius.circular(25),
-                                  border: Border.all(
-                                    color: Colors.green.withValues(alpha: 0.6),
-                                    width: 1,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.green.withValues(alpha: 0.3),
-                                      blurRadius: 10,
-                                      spreadRadius: 2,
-                                    ),
-                                  ],
-                                ),
-                                child: Text(
-                                  directionText,
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w600,
-                                    letterSpacing: 0.5,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              // Distance indicator with AR-style design
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: Colors.black.withValues(alpha: 0.4),
-                                  borderRadius: BorderRadius.circular(15),
-                                  border: Border.all(
-                                    color: Colors.white.withValues(alpha: 0.3),
-                                    width: 0.5,
-                                  ),
-                                ),
-                                child: Text(
-                                  '${nearestHotspot.name} • ${(nearestDistance * 3.28084).toStringAsFixed(0)} ft',
-                                  style: TextStyle(
-                                    color: Colors.white.withValues(alpha: 0.9),
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ),
-                            ],
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: () => _showHotspotSheet(nearestHotspot!, nearestDistance),
+                            child: _PulsingArrow(icon: arrowIcon),
                           ),
                         ),
                       ),
@@ -543,22 +384,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                 }
               }
 
-              // Heading HUD
-              widgets.add(
-                Positioned(
-                  top: MediaQuery.of(context).padding.top + 8,
-                  right: 8,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.black54,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text('${_headingDegrees.toStringAsFixed(0)}°',
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-                  ),
-                ),
-              );
+              // Remove degrees HUD per design request
 
               return Stack(children: widgets);
             },
@@ -721,8 +547,19 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFF6d8d24),
-      body: SafeArea(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      body: Stack(
+        children: [
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              height: MediaQuery.of(context).padding.top,
+              color: const Color(0xFF6d8d24),
+            ),
+          ),
+          SafeArea(
         child: Center(
           child: Padding(
             padding: const EdgeInsets.all(32.0),
@@ -733,10 +570,10 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                 Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: iconColor.withValues(alpha: 0.1),
+                    color: iconColor.withValues(alpha: 0.12),
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: iconColor.withValues(alpha: 0.3),
+                      color: iconColor.withValues(alpha: 0.25),
                       width: 2,
                     ),
                   ),
@@ -752,7 +589,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                 Text(
                   title,
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: Colors.black,
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
                     letterSpacing: 0.5,
@@ -765,7 +602,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                 Text(
                   message,
                   style: const TextStyle(
-                    color: Colors.white70,
+                    color: Colors.black87,
                     fontSize: 16,
                     height: 1.5,
                   ),
@@ -777,10 +614,10 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.1),
+                    color: Colors.black.withValues(alpha: 0.035),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.2),
+                      color: Colors.black.withValues(alpha: 0.06),
                       width: 1,
                     ),
                   ),
@@ -790,7 +627,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                       const Text(
                         'How to fix:',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: Colors.black,
                           fontSize: 18,
                           fontWeight: FontWeight.w600,
                         ),
@@ -808,14 +645,14 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                                 width: 24,
                                 height: 24,
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.2),
+                                  color: Colors.black.withValues(alpha: 0.06),
                                   shape: BoxShape.circle,
                                 ),
                                 child: Center(
                                   child: Text(
                                     '${index + 1}',
                                     style: const TextStyle(
-                                      color: Colors.white,
+                                      color: Colors.black,
                                       fontSize: 12,
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -827,7 +664,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                                 child: Text(
                                   step,
                                   style: const TextStyle(
-                                    color: Colors.white70,
+                                    color: Colors.black87,
                                     fontSize: 14,
                                     height: 1.4,
                                   ),
@@ -889,7 +726,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                     : const Icon(Icons.refresh),
                   label: Text(_retrying ? 'Initializing...' : 'Try Again'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
+                    backgroundColor: Theme.of(context).scaffoldBackgroundColor,
                     foregroundColor: const Color(0xFF6d8d24),
                     padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
                     shape: RoundedRectangleBorder(
@@ -901,7 +738,66 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
             ),
           ),
         ),
+        ),
+        ],
       ),
+    );
+  }
+
+  void _showNoHotspotsSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      showDragHandle: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF6d8d24).withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.explore_outlined, color: Color(0xFF6d8d24), size: 40),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'No locations nearby',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Walk around campus to discover AR hotspots',
+                style: TextStyle(color: Colors.black87),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF6d8d24),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  child: const Text('OK'),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
@@ -911,15 +807,23 @@ class _MapPinPainter extends CustomPainter {
   final String title;
   final String subtitle;
   final String? customEmoji;
-  _MapPinPainter({required this.color, required this.title, required this.subtitle, this.customEmoji});
+  final double labelScale;
+  _MapPinPainter({required this.color, required this.title, required this.subtitle, this.customEmoji, required this.labelScale});
+  
+  // Scale factor for label text (ties to distance-based marker scale)
+  
 
   // Get default emoji for hotspot type
   String _getDefaultEmoji() {
     final lowerTitle = title.toLowerCase();
+    // Use same fallbacks as _emojiForName for consistency
     if (lowerTitle.contains('library')) return '📚';
-    if (lowerTitle.contains('parking')) return '🅿️';
-    if (lowerTitle.contains('center') || lowerTitle.contains('scott')) return '🏟️';
-    if (lowerTitle.contains('test')) return '📚';
+    if (lowerTitle.contains('parking')) return '🚗';
+    if (lowerTitle.contains('fountain')) return '⛲️';
+    if (lowerTitle.contains('hall')) return '🏫';
+    if (lowerTitle.contains('center') || lowerTitle.contains('pavilion') || lowerTitle.contains('arena')) return '🏟️';
+    if (lowerTitle.contains('park')) return '🌳';
+    if (lowerTitle.contains('test')) return '🧪';
     return '📍'; // default emoji
   }
 
@@ -987,22 +891,20 @@ class _MapPinPainter extends CustomPainter {
       ),
     );
 
-    // Pulsing ring effect (subtle)
-    final Paint pulseRing = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5
-      ..color = color.withValues(alpha: 0.4);
-    canvas.drawCircle(markerCenter, markerSize * 1.2, pulseRing);
+    // Removed static ring to avoid double-border with animated halo
 
     // AR-style floating label
     final double maxLabelWidth = size.width * 0.9;
+    // Scale label fonts with the visual marker diameter (~84% of original)
+    final double titleFontSize = ((size.width * 0.12).clamp(8.0, 18.0)) * 0.84;
+    final double subtitleFontSize = ((size.width * 0.095).clamp(7.0, 14.0)) * 0.84;
     final TextPainter titlePainter = TextPainter(
       text: TextSpan(
         text: title,
-        style: const TextStyle(
+        style: TextStyle(
           color: Colors.white,
           fontWeight: FontWeight.w700,
-          fontSize: 12,
+          fontSize: titleFontSize,
           letterSpacing: 0.2,
         ),
       ),
@@ -1017,7 +919,7 @@ class _MapPinPainter extends CustomPainter {
         style: TextStyle(
           color: Colors.white.withValues(alpha: 0.9),
           fontWeight: FontWeight.w500,
-          fontSize: 10,
+          fontSize: subtitleFontSize,
           letterSpacing: 0.1,
         ),
       ),
@@ -1026,9 +928,9 @@ class _MapPinPainter extends CustomPainter {
       ellipsis: '…',
     )..layout(maxWidth: maxLabelWidth);
 
-    const double labelHPad = 12.0;
-    const double labelVPad = 8.0;
-    const double lineSpacing = 3.0;
+    final double labelHPad = 12.0 * 0.84;
+    final double labelVPad = 8.0 * 0.84;
+    final double lineSpacing = 3.0 * 0.84;
 
     final double contentWidth = math.max(titlePainter.width, subtitlePainter.width);
     final double contentHeight = titlePainter.height + lineSpacing + subtitlePainter.height;
@@ -1036,11 +938,11 @@ class _MapPinPainter extends CustomPainter {
     // Label background with AR-style design
     final RRect labelBg = RRect.fromRectAndRadius(
       Rect.fromCenter(
-        center: Offset(center.dx, markerCenter.dy + markerSize + 25),
+        center: Offset(center.dx, markerCenter.dy + markerSize + 18),
         width: contentWidth + 2 * labelHPad,
         height: contentHeight + 2 * labelVPad,
       ),
-      Radius.circular(16),
+      Radius.circular(12),
     );
 
     // Label glow effect
@@ -1086,6 +988,211 @@ class _MapPinPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _MapPinPainter oldDelegate) {
-    return oldDelegate.color != color || oldDelegate.title != title || oldDelegate.subtitle != subtitle || oldDelegate.customEmoji != customEmoji;
+    return oldDelegate.color != color ||
+        oldDelegate.title != title ||
+        oldDelegate.subtitle != subtitle ||
+        oldDelegate.customEmoji != customEmoji ||
+        oldDelegate.labelScale != labelScale;
+  }
+}
+
+class _PulsingMapPin extends StatefulWidget {
+  final Color color;
+  final String title;
+  final String subtitle;
+  final String? customEmoji;
+  final double labelScale;
+  const _PulsingMapPin({
+    required this.color,
+    required this.title,
+    required this.subtitle,
+    required this.customEmoji,
+    required this.labelScale,
+  });
+
+  @override
+  State<_PulsingMapPin> createState() => _PulsingMapPinState();
+}
+
+class _PulsingMapPinState extends State<_PulsingMapPin>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final double base = math.min(constraints.maxWidth, constraints.maxHeight);
+        // Match painter's marker geometry
+        final double markerSize = base * 0.3; // radius used by painter
+        final double markerCenterOffsetY = -markerSize * 0.2; // painter shifts circle up by 0.2R
+        // Halo sized tight around marker circle (slightly larger than diameter)
+        final double haloDiameter = markerSize * 2 * 1.06;
+
+        return AnimatedBuilder(
+          animation: _controller,
+          builder: (context, child) {
+            final double t = Curves.easeOut.transform(_controller.value);
+            final double haloScale = 1.0 + 0.28 * t; // slightly reduced spread
+            final double haloOpacity = (1.0 - t) * 0.28; // slightly dimmer
+
+            return Stack(
+              alignment: Alignment.center,
+              children: [
+                // Pulsing halo behind pin (relative size)
+                Transform.translate(
+                  offset: Offset(0, markerCenterOffsetY),
+                  child: Transform.scale(
+                    scale: haloScale,
+                    child: Container(
+                      width: haloDiameter,
+                      height: haloDiameter,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        // Stronger halo: thicker border + outer glow shadow
+                        border: Border.all(
+                          color: widget.color.withValues(alpha: (haloOpacity * 1.6).clamp(0.0, 1.0)),
+                          width: 2,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: widget.color.withValues(alpha: (haloOpacity * 1.2).clamp(0.0, 1.0)),
+                            blurRadius: 16,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Marker painter fills available space
+                const SizedBox.shrink(),
+                Positioned.fill(
+                  child: CustomPaint(
+                    painter: _MapPinPainter(
+                      color: widget.color,
+                      title: widget.title,
+                      subtitle: widget.subtitle,
+                      customEmoji: widget.customEmoji,
+                      labelScale: widget.labelScale,
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+class _PulsingArrow extends StatefulWidget {
+  final IconData icon;
+  const _PulsingArrow({required this.icon});
+
+  @override
+  State<_PulsingArrow> createState() => _PulsingArrowState();
+}
+
+class _PulsingArrowState extends State<_PulsingArrow>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final Color base = Theme.of(context).colorScheme.primary;
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        final double t = Curves.easeInOut.transform(_controller.value);
+        final double scale = 0.92 + 0.16 * t; // 0.92..1.08
+        final double ringScale = 1.0 + 0.35 * t; // subtle outward ripple
+        final double ringOpacity = 0.35 * (1.0 - t);
+
+        return Stack(
+          alignment: Alignment.center,
+          children: [
+            // Outer ripple ring
+            Transform.scale(
+              scale: ringScale,
+              child: Container(
+                width: 88,
+                height: 88,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: base.withValues(alpha: ringOpacity),
+                    width: 2,
+                  ),
+                ),
+              ),
+            ),
+
+            // Glowing base circle
+            Transform.scale(
+              scale: scale,
+              child: Container(
+                width: 84,
+                height: 84,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      base.withValues(alpha: 0.85),
+                      base.withValues(alpha: 0.35),
+                      base.withValues(alpha: 0.12),
+                    ],
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: base.withValues(alpha: 0.35),
+                      blurRadius: 22,
+                      spreadRadius: 6,
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  widget.icon,
+                  color: Colors.white,
+                  size: 54,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 }

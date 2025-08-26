@@ -40,7 +40,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     debugPrint('Building MyApp...');
     return MaterialApp(
-      title: 'Campus Tour App',
+      title: 'PSU Campus Tour',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF6D8D24)),
@@ -172,7 +172,7 @@ class _HomeWithNavState extends State<HomeWithNav> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    'Campus Tour App',
+                    'PSU Campus Tour',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w700,

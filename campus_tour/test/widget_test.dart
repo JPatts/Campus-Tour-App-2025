@@ -15,7 +15,7 @@ void main() {
     await tester.pump();
 
     // Home (center) page should show the AppBar title
-    expect(find.text('Campus Tour App'), findsOneWidget);
+    expect(find.text('PSU Campus Tour'), findsOneWidget);
 
     // BottomNavigationBar labels
     expect(find.text('Map'), findsOneWidget);
@@ -25,11 +25,11 @@ void main() {
     // Tapping Map should navigate to map page (no AppBar on non-center pages)
     await tester.tap(find.text('Map'));
     await tester.pump(const Duration(milliseconds: 400));
-    expect(find.text('Campus Tour App'), findsNothing);
+    expect(find.text('PSU Campus Tour'), findsNothing);
 
     // Return to Home
     await tester.tap(find.text('Home'));
     await tester.pump(const Duration(milliseconds: 400));
-    expect(find.text('Campus Tour App'), findsOneWidget);
+    expect(find.text('PSU Campus Tour'), findsOneWidget);
   });
 }
