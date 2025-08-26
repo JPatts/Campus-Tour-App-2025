@@ -82,7 +82,7 @@ class HotspotLocation {
 
 class HotspotFeature {
   final String featureId;
-  final String type;
+  final String type; // photo, video, 
   final String content;
   final String fileLocation;
   final String? postedDate;
