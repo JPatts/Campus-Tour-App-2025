@@ -4,7 +4,6 @@ import 'main.dart';
 import 'package:campus_tour/models/hotspot.dart';
 import 'package:campus_tour/services/hotspot_service.dart';
 import 'package:flutter/material.dart';
-import 'dart:io';
 import 'utils/emoji_helper.dart';
 
 var path = "";
@@ -96,30 +95,6 @@ class LocationList extends MyApp {
                       ],
                     ),
                   ),
-
-                        // build tile for each feature type
-                        if (feature.type == "photo") {
-                          return ListTile(
-                            title: Text(feature.content),
-                            subtitle: Image.asset(path),
-                          );
-                        } else if (feature.type == "video") {
-                          return ListTile(
-                            title: Text(feature.content),
-                            subtitle: VideoPlayerApp(),
-                          );
-                        } else {
-                          return ListTile(
-                            title: Text(feature.content[index]),
-                            subtitle: Center(
-                              child: Text("Error: invalid media type"),
-                            ),
-                          );
-                        }
-                      },
-                    ),
-                  ],
->>>>>>> 68f1f0b2ac4de3b4200290cbe764ac3aded9c770
                 );
               },
             ),
