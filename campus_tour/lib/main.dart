@@ -9,7 +9,7 @@ import 'services/hotspot_service.dart';
 import 'services/visited_service.dart';
 
 // PSU Color Pallet
-const psuGreen = 0xFF6D8D24;
+const psuGreen = 0xFF6d8d24;
 const electricGreen = 0xFFCFD82D;
 const forestGreen = 0xFF213921;
 

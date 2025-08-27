@@ -86,12 +86,8 @@ class _LocationListState extends State<LocationList> {
                         const SizedBox(height: 8),
                         Expanded(
                           child: currentList.isEmpty
-                              ? Center(
-                                  child: Text(
-                                    _tabIndex == 0 ? 'No visited hotspots yet' : 'No unvisited hotspots',
-                                  ),
-                                )
-          : ListView.separated(
+                              ? _buildEmptyState(_tabIndex == 0)
+                              : ListView.separated(
                                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                                   separatorBuilder: (_, __) => const SizedBox(height: 8),
                                   itemCount: currentList.length,
@@ -150,6 +146,175 @@ class _LocationListState extends State<LocationList> {
                 ),
                 alignment: Alignment.center,
                 child: Text('Unvisited', style: _tabIndex == 1 ? selectedText : unselectedText),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(bool isVisitedTab) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            
+            
+            // Title
+            Text(
+              isVisitedTab ? 'No Visited Hotspots Yet' : 'All Hotspots Visited!',
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            
+            // Description
+            Text(
+              isVisitedTab 
+                ? 'Start exploring PSU campus by visiting hotspots on the map. Each visit unlocks content for 72 hours!'
+                : 'Congratulations! You\'ve visited all the hotspots. Check back later for new content or revisit to refresh your access.',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[600],
+                height: 1.4,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 32),
+            
+            // Action button
+            if (isVisitedTab) ...[
+              ElevatedButton.icon(
+                onPressed: () {
+                  // Switch to map page
+                  final nav = HomeWithNav.navKey.currentState;
+                  nav?.goToMap();
+                },
+                icon: const Icon(Icons.map_outlined, size: 20),
+                label: const Text('Explore Map'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF6d8d24),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 2,
+                ),
+              ),
+            ] else ...[
+              // Show some stats or tips for completed state
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.green.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Colors.green.withValues(alpha: 0.3),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.emoji_events_outlined,
+                      color: Colors.green[700],
+                      size: 24,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'You\'re a PSU expert! Consider sharing your campus knowledge with others.',
+                        style: TextStyle(
+                          color: Colors.green[700],
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            
+            const SizedBox(height: 24),
+            
+            // Additional tips
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.blue.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: Colors.blue.withValues(alpha: 0.2),
+                  width: 1,
+                ),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.lightbulb_outline,
+                        color: Colors.blue[700],
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Pro Tips:',
+                        style: TextStyle(
+                          color: Colors.blue[700],
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  ...(isVisitedTab ? [
+                    _buildTip('Visit hotspots on the map to unlock content'),
+                    _buildTip('Content stays available for 72 hours after visiting'),
+                    _buildTip('Use the camera to capture memories at each location'),
+                  ] : [
+                    _buildTip('Revisit hotspots to refresh your 72-hour access'),
+                    _buildTip('Check back regularly for new content updates'),
+                    _buildTip('Share your campus discoveries with friends'),
+                  ]),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTip(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '• ',
+            style: TextStyle(
+              color: Colors.blue[700],
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                color: Colors.blue[700],
+                fontSize: 13,
+                height: 1.3,
               ),
             ),
           ),

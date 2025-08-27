@@ -557,7 +557,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
             right: 0,
             child: Container(
               height: MediaQuery.of(context).padding.top,
-              color: const Color(0xFF6d8d24),
+              color: const Color(0xFF566f1c),
             ),
           ),
           SafeArea(
@@ -728,7 +728,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                   label: Text(_retrying ? 'Initializing...' : 'Try Again'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-                    foregroundColor: const Color(0xFF6d8d24),
+                    foregroundColor: const Color(0xFF566f1c),
                     padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -764,10 +764,10 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                 width: 72,
                 height: 72,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF6d8d24).withValues(alpha: 0.12),
+                  color: const Color(0xFF566f1c).withValues(alpha: 0.12),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.explore_outlined, color: Color(0xFF6d8d24), size: 40),
+                child: const Icon(Icons.explore_outlined, color: Color(0xFF566f1c), size: 40),
               ),
               const SizedBox(height: 12),
               const Text(
@@ -787,7 +787,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                 child: ElevatedButton(
                   onPressed: () => Navigator.of(context).pop(),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF6d8d24),
+                    backgroundColor: const Color(0xFF566f1c),
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
