@@ -87,8 +87,8 @@ class _HomeWithNavState extends State<HomeWithNav> {
   final VisitedService _visitedService = VisitedService();
 
   List<Widget> _buildPages() => [
-        MapScreen(key: MapScreen.navKey, adminModeEnabled: _adminMode), // ← left
-        LocationList(adminModeEnabled: _adminMode), //   center (banner shows here)
+        MapScreen(key: ValueKey('map-$_adminMode'), adminModeEnabled: _adminMode), // ← left
+        LocationList(key: ValueKey('list-$_adminMode'), adminModeEnabled: _adminMode), //   center (banner shows here)
         const CameraScreen(), // → right
       ];
 

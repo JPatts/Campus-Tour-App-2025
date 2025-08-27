@@ -32,6 +32,11 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
   double _headingDegrees = 0; // 0..360, 0 = North
   List<Hotspot> _hotspots = [];
 
+  // Overlay stabilization for heading (reduce jitter in AR pins)
+  double? _smoothedHeadingDegrees;
+  static const double _headingSmoothingAlpha = 0.15; // lower = smoother
+  static const double _headingDeadbandDeg = 1.0; // ignore tiny changes
+
   bool _initializing = true;
   String _error = '';
   bool _retrying = false; // keep error screen visible during retry
@@ -124,10 +129,30 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
     _headingSub?.cancel();
     _headingSub = FlutterCompass.events?.listen((event) {
       final heading = event.heading; // in degrees, may be null
-      if (heading != null) {
-        setState(() => _headingDegrees = heading);
+      if (heading == null) return;
+
+      // Initialize smoother on first value
+      if (_smoothedHeadingDegrees == null) {
+        _smoothedHeadingDegrees = heading % 360;
+      } else {
+        final double diff = _shortestAngleDiff(_smoothedHeadingDegrees!, heading % 360);
+        if (diff.abs() > _headingDeadbandDeg) {
+          double next = (_smoothedHeadingDegrees! + _headingSmoothingAlpha * diff) % 360;
+          if (next < 0) next += 360;
+          _smoothedHeadingDegrees = next;
+        }
+      }
+
+      if (mounted && _smoothedHeadingDegrees != null) {
+        setState(() => _headingDegrees = _smoothedHeadingDegrees!);
       }
     });
+  }
+
+  // Returns the minimal signed angle difference from -> to in [-180, 180]
+  double _shortestAngleDiff(double from, double to) {
+    double diff = (to - from + 540) % 360 - 180;
+    return diff;
   }
 
   Future<void> _setupCamera() async {

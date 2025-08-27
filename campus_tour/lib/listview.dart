@@ -535,7 +535,7 @@ void _showLockedDialog(BuildContext context, Hotspot hotspot) {
             mapState?.focusOnHotspot(hotspot);
           },
           icon: const Icon(Icons.location_on, size: 18),
-          label: const Text('See Hotspot'),
+          label: const Text('View on Map'),
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF6d8d24),
             foregroundColor: Colors.white,
@@ -556,19 +556,42 @@ void _showLockedDialog(BuildContext context, Hotspot hotspot) {
 
 Future<Map<String, List<Hotspot>>> _groupByVisited(List<Hotspot> hotspots, bool adminModeEnabled) async {
   final service = VisitedService();
-  final List<bool> flags = await Future.wait(
-    hotspots.map((h) => service.isVisitedEffective(h.hotspotId, adminModeEnabled: false)),
-  );
-  final List<Hotspot> visited = [];
-  final List<Hotspot> unvisited = [];
-  for (int i = 0; i < hotspots.length; i++) {
-    if (flags[i]) {
-      visited.add(hotspots[i]);
-    } else {
-      unvisited.add(hotspots[i]);
+  
+  if (adminModeEnabled) {
+    // In admin mode, only real visits go to "visited" tab
+    // Fake visits stay in "unvisited" tab
+    final List<bool> realVisitFlags = await Future.wait(
+      hotspots.map((h) => service.getLastVisitedReal(h.hotspotId).then((date) => 
+        date != null && DateTime.now().difference(date) < const Duration(hours: 72)
+      )),
+    );
+    
+    final List<Hotspot> visited = [];
+    final List<Hotspot> unvisited = [];
+    for (int i = 0; i < hotspots.length; i++) {
+      if (realVisitFlags[i]) {
+        visited.add(hotspots[i]);
+      } else {
+        unvisited.add(hotspots[i]);
+      }
     }
+    return {'visited': visited, 'unvisited': unvisited};
+  } else {
+    // Normal mode: use effective visits (real + fake)
+    final List<bool> flags = await Future.wait(
+      hotspots.map((h) => service.isVisitedEffective(h.hotspotId, adminModeEnabled: false)),
+    );
+    final List<Hotspot> visited = [];
+    final List<Hotspot> unvisited = [];
+    for (int i = 0; i < hotspots.length; i++) {
+      if (flags[i]) {
+        visited.add(hotspots[i]);
+      } else {
+        unvisited.add(hotspots[i]);
+      }
+    }
+    return {'visited': visited, 'unvisited': unvisited};
   }
-  return {'visited': visited, 'unvisited': unvisited};
 }
 
 Widget _buildHotspotCard(BuildContext context, Hotspot hotspot) {
@@ -649,7 +672,6 @@ class _ExpiryTimerChip extends StatefulWidget {
 
 class _ExpiryTimerChipState extends State<_ExpiryTimerChip> {
   DateTime? _lastVisitedReal;
-  DateTime? _lastVisitedFake;
   Timer? _timer;
 
   @override
@@ -661,8 +683,7 @@ class _ExpiryTimerChipState extends State<_ExpiryTimerChip> {
 
   Future<void> _load() async {
     final real = await VisitedService().getLastVisitedReal(widget.hotspotId);
-    final fake = await VisitedService().getLastVisitedFake(widget.hotspotId);
-    if (mounted) setState(() { _lastVisitedReal = real; _lastVisitedFake = fake; });
+    if (mounted) setState(() { _lastVisitedReal = real; });
   }
 
   @override
@@ -674,6 +695,7 @@ class _ExpiryTimerChipState extends State<_ExpiryTimerChip> {
   @override
   Widget build(BuildContext context) {
     if (widget.adminModeEnabled) {
+      // In admin mode, show "Admin" for all hotspots
       return _buildChip('Admin', const Color(psuGreen), Colors.white);
     }
     final remaining = _remainingDuration();
@@ -688,9 +710,7 @@ class _ExpiryTimerChipState extends State<_ExpiryTimerChip> {
     if (_lastVisitedReal != null) {
       return _lastVisitedReal!.add(const Duration(hours: 72)).difference(DateTime.now());
     }
-    if (_lastVisitedFake != null) {
-      return _lastVisitedFake!.add(const Duration(seconds: 10)).difference(DateTime.now());
-    }
+    // Fake visits no longer have a time limit
     return null;
   }
 
@@ -854,6 +874,36 @@ Widget _buildPhotoContent(BuildContext context, String assetPath) {
               fit: BoxFit.cover,
               width: double.infinity,
               height: 200,
+              // Show a non-white placeholder while the asset decodes
+              frameBuilder: (BuildContext context, Widget child, int? frame, bool wasSynchronouslyLoaded) {
+                if (wasSynchronouslyLoaded) {
+                  return child;
+                }
+                return AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 250),
+                  child: frame != null
+                      ? child
+                      : Container(
+                          key: const ValueKey('photo_placeholder'),
+                          height: 200,
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [Colors.grey[300]!, Colors.grey[200]!],
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                            ),
+                          ),
+                          child: const Center(
+                            child: SizedBox(
+                              height: 24,
+                              width: 24,
+                              child: CircularProgressIndicator(strokeWidth: 2.5),
+                            ),
+                          ),
+                        ),
+                );
+              },
               errorBuilder: (context, error, stackTrace) {
                 return Container(
                   height: 150,

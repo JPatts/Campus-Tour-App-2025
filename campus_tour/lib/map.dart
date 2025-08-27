@@ -112,6 +112,31 @@ class _PhotoViewerScreenState extends State<PhotoViewerScreen> with SingleTicker
                     child: Image.asset(
                       widget.assetPath,
                       fit: BoxFit.contain,
+                      frameBuilder: (BuildContext context, Widget child, int? frame, bool wasSynchronouslyLoaded) {
+                        if (wasSynchronouslyLoaded) return child;
+                        return AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 250),
+                          child: frame != null
+                              ? child
+                              : Container(
+                                  key: const ValueKey('photo_placeholder_viewer'),
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [Colors.grey[900]!, Colors.grey[800]!],
+                                      begin: Alignment.topCenter,
+                                      end: Alignment.bottomCenter,
+                                    ),
+                                  ),
+                                  child: const Center(
+                                    child: SizedBox(
+                                      height: 28,
+                                      width: 28,
+                                      child: CircularProgressIndicator(strokeWidth: 2.8, color: Colors.white),
+                                    ),
+                                  ),
+                                ),
+                        );
+                      },
                     ),
                   ),
                 ),
@@ -171,6 +196,7 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
   bool _isLoading = true;
   String _errorMessage = '';
   bool _retrying = false; // keep error screen visible during retry
+  bool _mapVisualLoaded = false; // fade overlay until first map frame/camera idle
   List<Hotspot> _hotspots = [];
   final HotspotService _hotspotService = HotspotService();
   StreamSubscription<Position>? _positionSubscription;
@@ -709,6 +735,33 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
                 fit: BoxFit.cover,
                 width: double.infinity,
                 height: 200,
+                frameBuilder: (BuildContext context, Widget child, int? frame, bool wasSynchronouslyLoaded) {
+                  if (wasSynchronouslyLoaded) return child;
+                  return AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 250),
+                    child: frame != null
+                        ? child
+                        : Container(
+                            key: const ValueKey('photo_placeholder_map_card'),
+                            height: 200,
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [Colors.grey[300]!, Colors.grey[200]!],
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                              ),
+                            ),
+                            child: const Center(
+                              child: SizedBox(
+                                height: 24,
+                                width: 24,
+                                child: CircularProgressIndicator(strokeWidth: 2.5),
+                              ),
+                            ),
+                          ),
+                  );
+                },
                 errorBuilder: (context, error, stackTrace) {
                   return Container(
                     height: 150,
@@ -1429,6 +1482,7 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
                 controller.setMapStyle(_customMapStyle);
                 // Restrict camera to PSU campus bounds
                 controller.moveCamera(CameraUpdate.newLatLngBounds(_psuBounds, 50));
+                // First creation doesn't guarantee tiles are drawn; keep overlay until idle
               },
               initialCameraPosition: MapScreen.lastCameraPosition ?? _psuLocation,
               mapType: _mapType,
@@ -1456,7 +1510,36 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
                   // Check bounds only when camera movement stops for smoother experience
                   _checkAndCorrectCameraBounds(_lastCameraMove!);
                 }
+                if (!_mapVisualLoaded) {
+                  // First stable frame reached, hide overlay
+                  setState(() {
+                    _mapVisualLoaded = true;
+                  });
+                }
               },
+            ),
+            // Fade loading overlay over map until first idle frame
+            if (!_mapVisualLoaded) Positioned.fill(
+              child: AnimatedOpacity(
+                opacity: _mapVisualLoaded ? 0.0 : 1.0,
+                duration: const Duration(milliseconds: 250),
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Colors.grey[300]!, Colors.grey[200]!],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                    ),
+                  ),
+                  child: const Center(
+                    child: SizedBox(
+                      width: 28,
+                      height: 28,
+                      child: CircularProgressIndicator(strokeWidth: 2.8),
+                    ),
+                  ),
+                ),
+              ),
             ),
             // Map type toggle button (round), positioned above the My Location button
             Positioned(

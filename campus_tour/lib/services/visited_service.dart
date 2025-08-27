@@ -35,10 +35,12 @@ class VisitedService {
     if (real != null && now.difference(real) < const Duration(hours: 72)) {
       return true;
     }
-    // Fake visit window: 10s when not admin; when admin enabled, we already bypass checks
-    final fake = await getLastVisitedFake(hotspotId);
-    if (fake != null && now.difference(fake) < const Duration(seconds: 10)) {
-      return true;
+    // Fake visits should count ONLY when admin mode is enabled
+    if (adminModeEnabled) {
+      final fake = await getLastVisitedFake(hotspotId);
+      if (fake != null) {
+        return true;
+      }
     }
     return false;
   }
