@@ -309,6 +309,19 @@ void _showHotspotContent(BuildContext context, Hotspot hotspot) {
                       ),
                     ),
                     IconButton(
+                      tooltip: 'Show on map',
+                      onPressed: () {
+                        Navigator.of(ctx).pop();
+                        // Switch to map page
+                        final nav = HomeWithNav.navKey.currentState;
+                        nav?.goToMap();
+                        // Focus on the hotspot
+                        final mapState = MapScreen.navKey.currentState;
+                        mapState?.focusOnHotspot(hotspot);
+                      },
+                      icon: const Icon(Icons.map_outlined, color: Colors.white),
+                    ),
+                    IconButton(
                       tooltip: 'Open in Maps',
                       onPressed: () => _showOpenInMapsSheet(ctx, hotspot),
                       icon: const Icon(Icons.directions_outlined, color: Colors.white),
@@ -339,16 +352,37 @@ void _showHotspotContent(BuildContext context, Hotspot hotspot) {
   );
 }
 
-void _showLockedDialog(BuildContext context) {
+void _showLockedDialog(BuildContext context, Hotspot hotspot) {
   showDialog(
     context: context,
     builder: (ctx) => AlertDialog(
       title: const Text('Content locked'),
       content: const Text('Visit this hotspot on the map to unlock its content for 72 hours.'),
       actions: [
+        ElevatedButton.icon(
+          onPressed: () {
+            Navigator.of(ctx).pop();
+            // Switch to map page
+            final nav = HomeWithNav.navKey.currentState;
+            nav?.goToMap();
+            // Focus on the hotspot
+            final mapState = MapScreen.navKey.currentState;
+            mapState?.focusOnHotspot(hotspot);
+          },
+          icon: const Icon(Icons.location_on, size: 18),
+          label: const Text('See Hotspot'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF6d8d24),
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+        ),
         TextButton(
           onPressed: () => Navigator.of(ctx).pop(),
-          child: const Text('OK'),
+          child: const Text('Cancel'),
         ),
       ],
     ),
@@ -380,7 +414,7 @@ Widget _buildHotspotCard(BuildContext context, Hotspot hotspot) {
       if (isAdmin || visitedRecently) {
         _showHotspotContent(context, hotspot);
       } else {
-        _showLockedDialog(context);
+        _showLockedDialog(context, hotspot);
       }
     },
     borderRadius: BorderRadius.circular(16),
@@ -520,6 +554,8 @@ class _ExpiryTimerChipState extends State<_ExpiryTimerChip> {
     );
   }
 }
+
+
 
 Widget _buildFeatureWidget(BuildContext context, Hotspot hotspot, HotspotFeature feature) {
   return Card(

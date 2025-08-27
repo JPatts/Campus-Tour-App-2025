@@ -60,7 +60,7 @@ class MyApp extends StatelessWidget {
         ),
       ),
       // The widget below owns the PageView + bottom arrows
-      home: const HomeWithNav(),
+      home: HomeWithNav(key: HomeWithNav.navKey),
     );
   }
 }
@@ -70,6 +70,7 @@ class MyApp extends StatelessWidget {
 ///  • the “← / →” arrow bar
 ///  • showing the AppBar **only** on the center page
 class HomeWithNav extends StatefulWidget {
+  static final GlobalKey<_HomeWithNavState> navKey = GlobalKey<_HomeWithNavState>();
   const HomeWithNav({Key? key}) : super(key: key);
 
   @override
@@ -86,7 +87,7 @@ class _HomeWithNavState extends State<HomeWithNav> {
   final VisitedService _visitedService = VisitedService();
 
   List<Widget> _buildPages() => [
-        MapScreen(adminModeEnabled: _adminMode), // ← left
+        MapScreen(key: MapScreen.navKey, adminModeEnabled: _adminMode), // ← left
         LocationList(adminModeEnabled: _adminMode), //   center (banner shows here)
         const CameraScreen(), // → right
       ];
@@ -101,6 +102,8 @@ class _HomeWithNavState extends State<HomeWithNav> {
     );
     setState(() => _currentPage = index);
   }
+
+  void goToMap() => _goToPage(0);
 
   Future<void> _promptForAdminCode() async {
     final TextEditingController controller = TextEditingController();

@@ -20,6 +20,7 @@ import 'package:vector_math/vector_math_64.dart' show Matrix4;
 import 'utils/emoji_helper.dart';
 
 class MapScreen extends StatefulWidget {
+  static final GlobalKey<_MapScreenState> navKey = GlobalKey<_MapScreenState>();
   final bool adminModeEnabled;
   const MapScreen({Key? key, this.adminModeEnabled = false}) : super(key: key);
 
@@ -176,11 +177,20 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
   final Map<String, bool> _wasInsideHotspot = {}; // Track enter/exit transitions
   final Map<String, DateTime> _lastHotspotNotifyAt = {}; // Debounce notifications
   String? _currentlyShownSnackForHotspotId;
+  Timer? _accessibilityTimer; // Timer to update accessibility when timers expire
   MapType _mapType = MapType.normal;
   CameraPosition? _lastCameraMove;
   final Map<String, BitmapDescriptor> _emojiMarkerCache = {};
   final VisitedService _visitedService = VisitedService();
   Set<String> _accessibleHotspotIds = {};
+
+  void focusOnHotspot(Hotspot hotspot, {double zoom = 17.0}) {
+    final LatLng target = LatLng(hotspot.location.latitude, hotspot.location.longitude);
+    if (_mapController != null) {
+      _mapController!.animateCamera(CameraUpdate.newLatLngZoom(target, zoom));
+    }
+    MapScreen.lastCameraPosition = CameraPosition(target: target, zoom: zoom);
+  }
 
   // Portland State University coordinates
   static const CameraPosition _psuLocation = CameraPosition(
@@ -272,6 +282,12 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
     // Restore last selected map type if available
     _mapType = MapScreen.lastMapType ?? MapType.normal;
     _initializeMap();
+    // Start periodic accessibility updates to handle timer expirations
+    _accessibilityTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) {
+        _recomputeAccessibility();
+      }
+    });
   }
 
   @override
@@ -1254,15 +1270,15 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
     for (final hs in _hotspots) {
       if (hs.status != 'active') continue;
       final bool visitedEffective = await _visitedService.isVisitedEffective(hs.hotspotId, adminModeEnabled: widget.adminModeEnabled);
-      bool isWithinRadius = widget.adminModeEnabled;
-      if (!widget.adminModeEnabled && _currentPosition != null) {
+      bool isWithinRadius = false;
+      if (_currentPosition != null) {
         isWithinRadius = _hotspotService.isUserInHotspot(
           hs,
           _currentPosition!.latitude,
           _currentPosition!.longitude,
         );
       }
-      if (visitedEffective || isWithinRadius || widget.adminModeEnabled) {
+      if (visitedEffective || isWithinRadius) {
         acc.add(hs.hotspotId);
       }
     }
@@ -1295,13 +1311,13 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                const Color(0xFF6d8d24).withOpacity(0.95),
-                const Color(0xFF6d8d24).withOpacity(0.75),
+                const Color(0xFF213921).withOpacity(0.95),
+                const Color(0xFF213921).withOpacity(0.75),
               ],
             ),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF6d8d24).withOpacity(0.35),
+                color: const Color(0xFF213921).withOpacity(0.35),
                 blurRadius: 18,
                 spreadRadius: 2,
                 offset: const Offset(0, 6),
@@ -1743,6 +1759,7 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
     _mapController?.dispose();
     _positionSubscription?.cancel();
     _boundaryTimer?.cancel();
+    _accessibilityTimer?.cancel();
     super.dispose();
   }
 
