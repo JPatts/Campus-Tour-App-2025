@@ -8,7 +8,7 @@
     <application
         android:label="campus_tour"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/launcher_icon">
         <!-- Google Maps API key.  Replace the value below with your own key that has
              Android credentials enabled in the Google Cloud console. -->
         <meta-data
