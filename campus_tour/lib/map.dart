@@ -1467,6 +1467,33 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
                 ),
               ),
             ),
+            // Clear Cache (admin-only) above the map type button
+            if (widget.adminModeEnabled)
+              Positioned(
+                right: 12,
+                bottom: 80 + 56 + 12,
+                child: Material(
+                  color: Colors.white,
+                  elevation: 3,
+                  shape: const CircleBorder(),
+                  child: Tooltip(
+                    message: 'Clear visit history',
+                    child: InkWell(
+                      customBorder: const CircleBorder(),
+                      onTap: () async {
+                        await _promptAndClearVisits(context);
+                      },
+                      child: const SizedBox(
+                        width: 56,
+                        height: 56,
+                        child: Center(
+                          child: Icon(Icons.cleaning_services_outlined, color: Colors.black87),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             // Status bar background to match brand color
             Positioned(
               top: 0,
@@ -1571,6 +1598,95 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
         _mapType = chosen;
         MapScreen.lastMapType = chosen;
       });
+    }
+  }
+
+  Future<void> _promptAndClearVisits(BuildContext context) async {
+    final TextEditingController controller = TextEditingController();
+    String? errorText;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setStateDialog) => AlertDialog(
+            title: const Text('Clear Cache'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: controller,
+                  autofocus: true,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: 'Enter admin code',
+                    errorText: errorText,
+                  ),
+                  maxLength: 4,
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancel')),
+              ElevatedButton(
+                onPressed: () {
+                  if (controller.text.trim() == '4231') {
+                    Navigator.of(ctx).pop(true);
+                  } else {
+                    setStateDialog(() => errorText = 'Incorrect code');
+                  }
+                },
+                child: const Text('Clear'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (confirmed == true) {
+      await _visitedService.clearAllVisits();
+      if (!mounted) return;
+      // Recompute colored circles/markers
+      await _recomputeAccessibility();
+      // Show green-styled confirmation
+      final Color base = const Color(psuGreen);
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+          content: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [base.withOpacity(0.95), base.withOpacity(0.80)],
+              ),
+              boxShadow: [
+                BoxShadow(color: base.withOpacity(0.35), blurRadius: 18, spreadRadius: 2, offset: const Offset(0, 6)),
+              ],
+              border: Border.all(color: Colors.white.withOpacity(0.08), width: 1),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Visit history cleared',
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          duration: const Duration(seconds: 3),
+        ),
+      );
     }
   }
 

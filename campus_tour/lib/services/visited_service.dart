@@ -42,6 +42,16 @@ class VisitedService {
     }
     return false;
   }
+
+  Future<void> clearAllVisits() async {
+    final prefs = await SharedPreferences.getInstance();
+    final keys = prefs.getKeys();
+    for (final k in keys) {
+      if (k.startsWith(_keyRealPrefix) || k.startsWith(_keyFakePrefix)) {
+        await prefs.remove(k);
+      }
+    }
+  }
 }
 
 

@@ -74,28 +74,33 @@ class _LocationListState extends State<LocationList> {
 
                 final currentList = _tabIndex == 0 ? visited : unvisited;
 
-                return Column(
+                return Stack(
                   children: [
-                    const SizedBox(height: 8),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: _buildSegmentedControl(context),
-                    ),
-                    const SizedBox(height: 8),
-                    Expanded(
-                      child: currentList.isEmpty
-                          ? Center(
-                              child: Text(
-                                _tabIndex == 0 ? 'No visited hotspots yet' : 'No unvisited hotspots',
-                              ),
-                            )
+                    Column(
+                      children: [
+                        const SizedBox(height: 8),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: _buildSegmentedControl(context),
+                        ),
+                        const SizedBox(height: 8),
+                        Expanded(
+                          child: currentList.isEmpty
+                              ? Center(
+                                  child: Text(
+                                    _tabIndex == 0 ? 'No visited hotspots yet' : 'No unvisited hotspots',
+                                  ),
+                                )
           : ListView.separated(
-                              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                              separatorBuilder: (_, __) => const SizedBox(height: 8),
-                              itemCount: currentList.length,
-                              itemBuilder: (ctx, i) => _buildHotspotCard(ctx, currentList[i]),
-                            ),
+                                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                                  itemCount: currentList.length,
+                                  itemBuilder: (ctx, i) => _buildHotspotCard(ctx, currentList[i]),
+                                ),
+                        ),
+                      ],
                     ),
+                    // Clear Cache button moved to Map screen per request
                   ],
                 );
               },
@@ -149,6 +154,123 @@ class _LocationListState extends State<LocationList> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+void _showGreenSnack(BuildContext context, String message) {
+  final Color base = const Color(psuGreen);
+  ScaffoldMessenger.of(context).hideCurrentSnackBar();
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      behavior: SnackBarBehavior.floating,
+      margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+      content: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              base.withOpacity(0.95),
+              base.withOpacity(0.80),
+            ],
+          ),
+          boxShadow: [
+            BoxShadow(color: base.withOpacity(0.35), blurRadius: 18, spreadRadius: 2, offset: const Offset(0, 6)),
+          ],
+          border: Border.all(color: Colors.white.withOpacity(0.08), width: 1),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.check_circle, color: Colors.white),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+              ),
+            ),
+          ],
+        ),
+      ),
+      duration: const Duration(seconds: 3),
+    ),
+  );
+}
+
+Future<void> _promptAndClearVisits(BuildContext context) async {
+  final TextEditingController controller = TextEditingController();
+  String? errorText;
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (ctx) {
+      return StatefulBuilder(
+        builder: (ctx, setStateDialog) => AlertDialog(
+          title: const Text('Clear Cache'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: controller,
+                autofocus: true,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: 'Enter admin code',
+                  errorText: errorText,
+                ),
+                maxLength: 4,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancel')),
+            ElevatedButton(
+              onPressed: () {
+                if (controller.text.trim() == '4231') {
+                  Navigator.of(ctx).pop(true);
+                } else {
+                  setStateDialog(() => errorText = 'Incorrect code');
+                }
+              },
+              child: const Text('Clear'),
+            ),
+          ],
+        ),
+      );
+    },
+  );
+
+  if (confirmed == true) {
+    await VisitedService().clearAllVisits();
+    if (context.mounted) _showGreenSnack(context, 'Visit history cleared');
+  }
+}
+
+class _ClearVisitsFab extends StatelessWidget {
+  final Future<void> Function() onClear;
+  const _ClearVisitsFab({Key? key, required this.onClear}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      shape: const CircleBorder(),
+      elevation: 3,
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onClear,
+        child: const SizedBox(
+          width: 56,
+          height: 56,
+          child: Center(
+            child: Icon(Icons.cleaning_services_outlined, color: Colors.black87),
+          ),
+        ),
       ),
     );
   }

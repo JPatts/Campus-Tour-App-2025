@@ -188,10 +188,10 @@ class _HomeWithNavState extends State<HomeWithNav> {
               toolbarHeight: 70,
               title: Transform.translate(
                 offset: const Offset(0, -12),
-                child: const Column(
+                child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
+                    const Text(
                       'PSU Campus Tour',
                       style: TextStyle(
                         fontSize: 18,
@@ -199,8 +199,8 @@ class _HomeWithNavState extends State<HomeWithNav> {
                         letterSpacing: 0.2,
                       ),
                     ),
-                    SizedBox(height: 2),
-                    Text(
+                    const SizedBox(height: 2),
+                    const Text(
                       'Locations',
                       style: TextStyle(
                         fontSize: 16,
