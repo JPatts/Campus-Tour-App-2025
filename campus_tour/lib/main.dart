@@ -6,6 +6,7 @@ import 'map.dart'; // left-hand page
 import 'camera.dart'; // right-hand page
 import 'listview.dart'; // list of discovered locations
 import 'services/hotspot_service.dart';
+import 'services/visited_service.dart';
 
 // PSU Color Pallet
 const psuGreen = 0xFF6D8D24;
@@ -82,10 +83,11 @@ class _HomeWithNavState extends State<HomeWithNav> {
   bool _adminMode = false; // Hidden admin mode state
   int _mapIconTapCount = 0; // triple-tap detection
   DateTime? _lastMapIconTap;
+  final VisitedService _visitedService = VisitedService();
 
   List<Widget> _buildPages() => [
         MapScreen(adminModeEnabled: _adminMode), // ← left
-        LocationList(), //   center (banner shows here)
+        LocationList(adminModeEnabled: _adminMode), //   center (banner shows here)
         const CameraScreen(), // → right
       ];
 
@@ -135,9 +137,8 @@ class _HomeWithNavState extends State<HomeWithNav> {
                   if (controller.text.trim() == '4231') {
                     Navigator.of(ctx).pop();
                     setState(() => _adminMode = true);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Admin mode enabled')),
-                    );
+                    _markAllHotspotsVisited();
+                    _showAdminSnack('Admin mode enabled', enabled: true);
                   } else {
                     setStateDialog(() {
                       errorText = 'Incorrect code';
@@ -151,6 +152,23 @@ class _HomeWithNavState extends State<HomeWithNav> {
         );
       },
     );
+  }
+
+  Future<void> _markAllHotspotsVisited() async {
+    try {
+      // Ensure hotspots are loaded
+      if (!myService.isLoaded) {
+        await myService.loadHotspots();
+      }
+      final hotspots = myService.getHostpots();
+      final now = DateTime.now();
+      for (final hs in hotspots) {
+        await _visitedService.markVisitedFake(hs.hotspotId, now);
+      }
+      // Suppressed snackbar per requirements
+    } catch (_) {
+      // No-op on errors; testing helper
+    }
   }
 
   @override
@@ -168,28 +186,31 @@ class _HomeWithNavState extends State<HomeWithNav> {
           ? AppBar(
               centerTitle: true,
               toolbarHeight: 70,
-              title: const Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'PSU Campus Tour',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.2,
+              title: Transform.translate(
+                offset: const Offset(0, -12),
+                child: const Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'PSU Campus Tour',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.2,
+                      ),
                     ),
-                  ),
-                  SizedBox(height: 2),
-                  Text(
-                    'Locations',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.white70,
-                      letterSpacing: 0.2,
+                    SizedBox(height: 2),
+                    Text(
+                      'Locations',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.white70,
+                        letterSpacing: 0.2,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             )
           : null,
@@ -236,9 +257,7 @@ class _HomeWithNavState extends State<HomeWithNav> {
                 _lastMapIconTap = null;
                 if (_adminMode) {
                   setState(() => _adminMode = false);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Admin mode disabled')),
-                  );
+                  _showAdminSnack('Admin mode disabled', enabled: false);
                 } else {
                   _promptForAdminCode();
                 }
@@ -268,6 +287,51 @@ class _HomeWithNavState extends State<HomeWithNav> {
         ],
           ),
         ),
+      ),
+    );
+  }
+
+  void _showAdminSnack(String message, {required bool enabled}) {
+    if (!mounted) return;
+    final Color base = enabled ? const Color(0xFF2E7D32) : const Color(0xFFB23B3B);
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+        content: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                base.withOpacity(0.95),
+                base.withOpacity(0.80),
+              ],
+            ),
+            boxShadow: [
+              BoxShadow(color: base.withOpacity(0.35), blurRadius: 18, spreadRadius: 2, offset: const Offset(0, 6)),
+            ],
+            border: Border.all(color: Colors.white.withOpacity(0.08), width: 1),
+          ),
+          child: Row(
+            children: [
+              Icon(enabled ? Icons.verified_user : Icons.shield_moon_outlined, color: Colors.white),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  message,
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+                ),
+              ),
+            ],
+          ),
+        ),
+        duration: const Duration(seconds: 3),
       ),
     );
   }

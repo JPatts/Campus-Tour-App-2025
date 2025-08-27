@@ -12,6 +12,7 @@ import 'dart:math' as math;
 import 'main.dart';
 import 'models/hotspot.dart';
 import 'services/hotspot_service.dart';
+import 'services/visited_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:video_player/video_player.dart';
 import 'package:audioplayers/audioplayers.dart';
@@ -178,6 +179,8 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
   MapType _mapType = MapType.normal;
   CameraPosition? _lastCameraMove;
   final Map<String, BitmapDescriptor> _emojiMarkerCache = {};
+  final VisitedService _visitedService = VisitedService();
+  Set<String> _accessibleHotspotIds = {};
 
   // Portland State University coordinates
   static const CameraPosition _psuLocation = CameraPosition(
@@ -314,6 +317,7 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
       }
       // Prepare emoji marker icons for all hotspots (lazy generation also happens on demand)
       await _prepareEmojiMarkers(hotspots);
+      await _recomputeAccessibility();
     } catch (e) {
       debugPrint('Error loading hotspots: $e');
     }
@@ -471,28 +475,30 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
 
   // _getHotspotColor already provides the same transparency used by circles
 
-  void _onHotspotTapped(Hotspot hotspot) {
+  void _onHotspotTapped(Hotspot hotspot) async {
     // Check if user is within hotspot radius or testing mode is enabled
-    if (widget.adminModeEnabled) {
-      _showHotspotContent(hotspot);
-    } else if (_currentPosition != null) {
-      bool isWithinRadius = _hotspotService.isUserInHotspot(
-        hotspot,
-        _currentPosition!.latitude,
-        _currentPosition!.longitude,
-      );
+    final bool visitedEffective = await _visitedService.isVisitedEffective(
+      hotspot.hotspotId,
+      adminModeEnabled: widget.adminModeEnabled,
+    );
+    final bool isWithinRadius = _currentPosition != null
+        ? _hotspotService.isUserInHotspot(
+            hotspot,
+            _currentPosition!.latitude,
+            _currentPosition!.longitude,
+          )
+        : false;
 
-      if (isWithinRadius) {
-        _showHotspotContent(hotspot);
-      } else {
-        _showHotspotInfo(hotspot);
-      }
+    if (widget.adminModeEnabled || visitedEffective || isWithinRadius) {
+      _showHotspotContent(hotspot);
     } else {
       _showHotspotInfo(hotspot);
     }
   }
 
   void _showHotspotContent(Hotspot hotspot) {
+    // Mark REAL visit when opening content from map
+    _visitedService.markVisitedReal(hotspot.hotspotId, DateTime.now());
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -1104,15 +1110,7 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
     // Add circles for hotspot radius
     for (final hotspot in _hotspots) {
       if (hotspot.status == 'active') {
-        // Check if user is within hotspot radius or testing mode is enabled
-        bool isWithinRadius = widget.adminModeEnabled;
-        if (!widget.adminModeEnabled && _currentPosition != null) {
-          isWithinRadius = _hotspotService.isUserInHotspot(
-            hotspot,
-            _currentPosition!.latitude,
-            _currentPosition!.longitude,
-          );
-        }
+        final bool isAccessible = widget.adminModeEnabled || _accessibleHotspotIds.contains(hotspot.hotspotId);
 
         // Add shadow circle for 3D effect (smaller border)
         circles.add(
@@ -1134,7 +1132,7 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
             radius: hotspot.location.radius,
             strokeColor: Colors.transparent,
             strokeWidth: 0,
-            fillColor: _getHotspotColor(isWithinRadius),
+            fillColor: _getHotspotColor(isAccessible),
           ),
         );
         
@@ -1146,13 +1144,13 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
             radius: hotspot.location.radius * 0.95, // Smaller highlight border
             strokeColor: Colors.transparent,
             strokeWidth: 0,
-            fillColor: _getHotspotColor(isWithinRadius).withValues(alpha: 0.25), // Extremely transparent highlight
+            fillColor: _getHotspotColor(isAccessible).withValues(alpha: 0.25), // Extremely transparent highlight
           ),
         );
 
         // Add a visible ring in any non-standard map mode
         if (_mapType == MapType.satellite || _mapType == MapType.hybrid) {
-          final Color ringColor = isWithinRadius
+          final Color ringColor = isAccessible
               ? const Color(0xFF1B5E20) // dark green when inside
               : Colors.orange; // orange when outside
 
@@ -1214,6 +1212,7 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
         _currentPosition = position;
       });
       _evaluateProximityAndNotify();
+      _recomputeAccessibility();
     }, onError: (e) {
       debugPrint('Position stream error: $e');
     });
@@ -1240,9 +1239,37 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
         final DateTime last = _lastHotspotNotifyAt[hotspot.hotspotId] ?? DateTime.fromMillisecondsSinceEpoch(0);
         if (now.difference(last).inSeconds >= 8) {
           _lastHotspotNotifyAt[hotspot.hotspotId] = now;
+          // Automatically mark a REAL visit upon entering the hotspot zone
+          _visitedService.markVisitedReal(hotspot.hotspotId, now);
+          // Refresh accessibility state so color updates promptly
+          _recomputeAccessibility();
           _showEnteredHotspotSnack(hotspot);
         }
       }
+    }
+  }
+
+  Future<void> _recomputeAccessibility() async {
+    final Set<String> acc = {};
+    for (final hs in _hotspots) {
+      if (hs.status != 'active') continue;
+      final bool visitedEffective = await _visitedService.isVisitedEffective(hs.hotspotId, adminModeEnabled: widget.adminModeEnabled);
+      bool isWithinRadius = widget.adminModeEnabled;
+      if (!widget.adminModeEnabled && _currentPosition != null) {
+        isWithinRadius = _hotspotService.isUserInHotspot(
+          hs,
+          _currentPosition!.latitude,
+          _currentPosition!.longitude,
+        );
+      }
+      if (visitedEffective || isWithinRadius || widget.adminModeEnabled) {
+        acc.add(hs.hotspotId);
+      }
+    }
+    if (mounted) {
+      setState(() {
+        _accessibleHotspotIds = acc;
+      });
     }
   }
 
