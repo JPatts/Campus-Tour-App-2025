@@ -123,7 +123,7 @@ campus_tour/
 
 ---
 
-## Security and API Keys
+## API Keys
 
 - Previous Google Maps API keys are revoked.
 - To enable maps, create your own key and add it here:
