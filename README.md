@@ -129,13 +129,7 @@ campus_tour/
 - To enable maps, create your own key and add it here:
   - Android: `campus_tour/android/app/src/main/AndroidManifest.xml` (`com.google.android.geo.API_KEY`)
   - iOS: `campus_tour/ios/Runner/Info.plist`
-- Restrict keys (Android package + SHA-1; iOS bundle ID) and never commit them.
 - Note: Xcode Simulator can run without keys; real devices/builds require valid keys.
-
-### Testing
-- Unit tests: `flutter test`
-- Manual testing checklist in documentation
-- Physical device testing required for GPS/AR features
 
 ---
 

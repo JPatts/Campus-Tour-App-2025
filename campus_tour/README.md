@@ -24,4 +24,4 @@ Previous API keys are revoked. To enable maps:
 - Android: set `com.google.android.geo.API_KEY` in `android/app/src/main/AndroidManifest.xml`
 - iOS: set key in `ios/Runner/Info.plist`
 
-Restrict keys (package/bundle IDs) and do not commit them. Xcode Simulator may work without keys; real devices/builds require valid keys.
+Xcode Simulator may work without keys; real devices/builds require valid keys.
