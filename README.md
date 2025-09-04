@@ -121,6 +121,17 @@ campus_tour/
 2. Configure Google Maps API key
 3. Test on physical devices for GPS/camera features
 
+---
+
+## Security and API Keys
+
+- All previously issued Google Maps API keys for this project have been revoked and are no longer valid.
+- To run the app locally, generate your own API keys in Google Cloud Console and add them to the platform configs:
+  - Android: `campus_tour/android/app/src/main/AndroidManifest.xml` (`com.google.android.geo.API_KEY`)
+  - iOS: `campus_tour/ios/Runner/Info.plist` (GMS API key)
+- Apply strict key restrictions (Android package name + SHA-1; iOS bundle ID) and do not commit keys to the repository.
+- If keys are missing or invalid, map features will be limited or fail at runtime.
+
 ### Testing
 - Unit tests: `flutter test`
 - Manual testing checklist in documentation
