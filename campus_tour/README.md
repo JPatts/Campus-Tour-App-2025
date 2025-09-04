@@ -19,9 +19,9 @@ samples, guidance on mobile development, and a full API reference.
 
 ## API Keys
 
-API key access used by previous builds has been revoked. To enable maps and related services, create your own Google Maps API key and configure it here:
+Previous API keys are revoked. To enable maps:
 
-- Android: `android/app/src/main/AndroidManifest.xml` (`com.google.android.geo.API_KEY`)
-- iOS: `ios/Runner/Info.plist`
+- Android: set `com.google.android.geo.API_KEY` in `android/app/src/main/AndroidManifest.xml`
+- iOS: set key in `ios/Runner/Info.plist`
 
-Restrict keys to your package/bundle IDs and do not commit keys to source control.
+Restrict keys (package/bundle IDs) and do not commit them. Xcode Simulator may work without keys; real devices/builds require valid keys.

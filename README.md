@@ -125,12 +125,12 @@ campus_tour/
 
 ## Security and API Keys
 
-- All previously issued Google Maps API keys for this project have been revoked and are no longer valid.
-- To run the app locally, generate your own API keys in Google Cloud Console and add them to the platform configs:
+- Previous Google Maps API keys are revoked.
+- To enable maps, create your own key and add it here:
   - Android: `campus_tour/android/app/src/main/AndroidManifest.xml` (`com.google.android.geo.API_KEY`)
-  - iOS: `campus_tour/ios/Runner/Info.plist` (GMS API key)
-- Apply strict key restrictions (Android package name + SHA-1; iOS bundle ID) and do not commit keys to the repository.
-- If keys are missing or invalid, map features will be limited or fail at runtime.
+  - iOS: `campus_tour/ios/Runner/Info.plist`
+- Restrict keys (Android package + SHA-1; iOS bundle ID) and never commit them.
+- Note: Xcode Simulator can run without keys; real devices/builds require valid keys.
 
 ### Testing
 - Unit tests: `flutter test`
